@@ -25,8 +25,11 @@
 			</div>
 		</div>
 	</div>
+	<hr/>
+	<div class="row">
+		<div class="col-sm-2 col-xs-12"></div>
+		<div class="col-sm-10 col-xs-12">
+			<button id="save" class="btn btn-primary btn-sm fw-semibold ff-secondary w-100 text-center text-nowrap">Save changes</button>
+		</div>
+	</div>
 </form>
-
-<button id="save" class="floating-button mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored">
-	<i class="material-icons">save</i>
-</button>
