@@ -4,6 +4,7 @@
 	const hooks = await app.require('hooks');
 	const alerts = await app.require('alerts');
 	const api = await app.require('api');
+	const translator = await app.require('translator');
 
 	let notesPanel = null;
 
@@ -419,7 +420,7 @@
 		}
 	});
 
-	function renderBadges() {
+	async function renderBadges() {
 		const tid = getTid();
 		if (!tid) {
 			return;
@@ -459,6 +460,9 @@
 		}
 
 		if (ajaxify.data.assignee && badgeContainer) {
+			const assignedToLabel = await new Promise((resolve) => {
+				translator.translate('[[internalnotes:assigned-to]]', resolve);
+			});
 			const a = ajaxify.data.assignee;
 			const badge = document.createElement('span');
 			badge.id = 'assignee-badge';
@@ -466,10 +470,10 @@
 			if (a.type === 'group') {
 				const icon = a.group.icon ? `<i class="${escapeHtml(a.group.icon)}"></i> ` : '<i class="fa fa-users"></i> ';
 				badge.className = 'badge bg-info text-dark ms-2 assignee-badge';
-				badge.innerHTML = icon + escapeHtml(a.group.name);
+				badge.innerHTML = icon + escapeHtml(assignedToLabel) + ' ' + escapeHtml(a.group.name);
 			} else {
 				badge.className = 'badge bg-info text-dark ms-2 assignee-badge';
-				badge.innerHTML = `<i class="fa fa-user"></i> ${escapeHtml(a.user.username)}`;
+				badge.innerHTML = '<i class="fa fa-user"></i> ' + escapeHtml(assignedToLabel) + ' ' + escapeHtml(a.user.username);
 			}
 			badge.addEventListener('click', openNotesPanel);
 			badgeContainer.appendChild(badge);
