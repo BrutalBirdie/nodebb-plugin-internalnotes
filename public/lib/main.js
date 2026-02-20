@@ -93,7 +93,7 @@
 		try {
 			const { notes } = await api.get(`/plugins/internalnotes/${tid}`, {});
 			await renderNotes(notes || [], tid);
-		} catch (err) {
+		} catch (_) {
 			const msg = await t('error-loading');
 			notesPanel.querySelector('.internal-notes-list').innerHTML =
 				'<p class="text-muted p-3">' + escapeHtml(msg) + '</p>';
