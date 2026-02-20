@@ -8,24 +8,36 @@
 
 	let notesPanel = null;
 
-	function buildNotesPanel() {
+	function t(key) {
+		return new Promise((resolve) => {
+			translator.translate('[[internalnotes:' + key + ']]', resolve);
+		});
+	}
+
+	async function buildNotesPanel() {
 		if (notesPanel) {
 			notesPanel.remove();
 		}
+
+		const [panelTitle, placeholder, addNote] = await Promise.all([
+			t('panel-title'),
+			t('placeholder'),
+			t('add-note'),
+		]);
 
 		const panel = document.createElement('div');
 		panel.id = 'internal-notes-panel';
 		panel.className = 'internal-notes-panel hidden';
 		panel.innerHTML = `
 			<div class="internal-notes-header">
-				<h5><i class="fa fa-sticky-note"></i> [[internalnotes:panel-title]]</h5>
+				<h5><i class="fa fa-sticky-note"></i> ${escapeHtml(panelTitle)}</h5>
 				<button class="btn btn-sm btn-link internal-notes-close" title="Close"><i class="fa fa-times"></i></button>
 			</div>
 			<div class="internal-notes-assignee"></div>
 			<div class="internal-notes-list"></div>
 			<div class="internal-notes-form">
-				<textarea class="form-control internal-notes-input" rows="3" placeholder="[[internalnotes:placeholder]]"></textarea>
-				<button class="btn btn-primary btn-sm internal-notes-submit mt-2">[[internalnotes:add-note]]</button>
+				<textarea class="form-control internal-notes-input" rows="3" placeholder="${escapeHtml(placeholder)}"></textarea>
+				<button class="btn btn-primary btn-sm internal-notes-submit mt-2">${escapeHtml(addNote)}</button>
 			</div>
 		`;
 		document.body.appendChild(panel);
@@ -68,7 +80,7 @@
 			await api.post(`/plugins/internalnotes/${tid}`, { content });
 			textarea.value = '';
 			await loadNotes(tid);
-			alerts.success('[[internalnotes:note-added]]');
+			alerts.success(await t('note-added'));
 		} catch (err) {
 			alerts.error(err.message || '[[error:unknown]]');
 		}
@@ -80,17 +92,24 @@
 		}
 		try {
 			const { notes } = await api.get(`/plugins/internalnotes/${tid}`, {});
-			renderNotes(notes || [], tid);
+			await renderNotes(notes || [], tid);
 		} catch (err) {
+			const msg = await t('error-loading');
 			notesPanel.querySelector('.internal-notes-list').innerHTML =
-				'<p class="text-muted p-3">[[internalnotes:error-loading]]</p>';
+				'<p class="text-muted p-3">' + escapeHtml(msg) + '</p>';
 		}
 	}
 
-	function renderNotes(notes, tid) {
+	async function renderNotes(notes, tid) {
 		const list = notesPanel.querySelector('.internal-notes-list');
+		const [noNotes, deleteNoteTitle, confirmDelete, noteDeleted] = await Promise.all([
+			t('no-notes'),
+			t('delete-note'),
+			t('confirm-delete'),
+			t('note-deleted'),
+		]);
 		if (!notes.length) {
-			list.innerHTML = '<p class="text-muted p-3">[[internalnotes:no-notes]]</p>';
+			list.innerHTML = '<p class="text-muted p-3">' + escapeHtml(noNotes) + '</p>';
 			return;
 		}
 		list.innerHTML = notes.map(note => `
@@ -99,7 +118,7 @@
 					<img src="${note.user.picture || ''}" class="avatar avatar-xs" alt="" onerror="this.style.display='none'" />
 					<strong>${escapeHtml(note.user.username || 'Unknown')}</strong>
 					<span class="timeago text-muted" title="${note.timestampISO}">${note.timestampISO}</span>
-					<button class="btn btn-xs btn-link text-danger delete-note" data-note-id="${note.noteId}" title="[[internalnotes:delete-note]]">
+					<button class="btn btn-xs btn-link text-danger delete-note" data-note-id="${note.noteId}" title="${escapeHtml(deleteNoteTitle)}">
 						<i class="fa fa-trash"></i>
 					</button>
 				</div>
@@ -110,13 +129,13 @@
 		list.querySelectorAll('.delete-note').forEach((btn) => {
 			btn.addEventListener('click', async () => {
 				const noteId = btn.getAttribute('data-note-id');
-				if (confirm('[[internalnotes:confirm-delete]]')) {
+				if (confirm(confirmDelete)) {
 					try {
 						await api.del(`/plugins/internalnotes/${tid}/${noteId}`, {});
 						await loadNotes(tid);
-						alerts.success('[[internalnotes:note-deleted]]');
+						alerts.success(noteDeleted);
 					} catch (err) {
-						alerts.error(err.message || '[[error:unknown]]');
+						alerts.error(err.message || (await t('error-loading')));
 					}
 				}
 			});
@@ -135,18 +154,24 @@
 		}
 		try {
 			const { assignee } = await api.get(`/plugins/internalnotes/${tid}/assign`, {});
-			renderAssignee(assignee, tid);
+			await renderAssignee(assignee, tid);
 		} catch {
 			// silently fail
 		}
 	}
 
-	function renderAssignee(assignee, tid) {
+	async function renderAssignee(assignee, tid) {
 		const container = notesPanel.querySelector('.internal-notes-assignee');
+		const [notAssigned, assignedTo, unassignTitle, unassigned] = await Promise.all([
+			t('not-assigned'),
+			t('assigned-to'),
+			t('unassign'),
+			t('unassigned'),
+		]);
 		if (!assignee) {
 			container.innerHTML = `
 				<div class="assignee-info">
-					<span class="text-muted"><i class="fa fa-user"></i> [[internalnotes:not-assigned]]</span>
+					<span class="text-muted"><i class="fa fa-user"></i> ${escapeHtml(notAssigned)}</span>
 				</div>
 			`;
 			return;
@@ -166,8 +191,8 @@
 		container.innerHTML = `
 			<div class="assignee-info">
 				<i class="fa ${assignee.type === 'group' ? 'fa-users' : 'fa-user'}"></i>
-				[[internalnotes:assigned-to]] ${label}
-				<button class="btn btn-xs btn-link text-danger unassign-topic" title="[[internalnotes:unassign]]">
+				${escapeHtml(assignedTo)} ${label}
+				<button class="btn btn-xs btn-link text-danger unassign-topic" title="${escapeHtml(unassignTitle)}">
 					<i class="fa fa-times"></i>
 				</button>
 			</div>
@@ -176,78 +201,104 @@
 			try {
 				await api.del(`/plugins/internalnotes/${tid}/assign`, {});
 				await loadAssignee(tid);
-				alerts.success('[[internalnotes:unassigned]]');
+				alerts.success(unassigned);
 			} catch (err) {
-				alerts.error(err.message || '[[error:unknown]]');
+				alerts.error(err.message || (await t('error-loading')));
 			}
 		});
 	}
 
 	// --- Assign modal ---
 
-	function showAssignModal(tid) {
+	async function showAssignModal(tid) {
 		let selectedType = null;
 		let selectedId = null;
+
+		const [
+			assignToMyself,
+			tabUser,
+			tabGroup,
+			searchUserPlaceholder,
+			searchGroupPlaceholder,
+			selectedLabel,
+			assignModalTitle,
+			cancelLabel,
+			assignConfirmLabel,
+			selectTargetFirst,
+			assignedSuccess,
+		] = await Promise.all([
+			t('assign-to-myself'),
+			t('tab-user'),
+			t('tab-group'),
+			t('search-user-placeholder'),
+			t('search-group-placeholder'),
+			t('selected'),
+			t('assign-modal-title'),
+			t('cancel'),
+			t('assign-confirm'),
+			t('select-target-first'),
+			t('assigned-success'),
+		]);
 
 		const bodyHtml = `
 			<div class="assign-modal-body">
 				<button type="button" class="btn btn-outline-primary w-100 mb-3" id="assign-self-btn">
-					<i class="fa fa-hand-pointer-o me-1"></i> [[internalnotes:assign-to-myself]]
+					<i class="fa fa-hand-pointer-o me-1"></i> ${escapeHtml(assignToMyself)}
 				</button>
 				<hr />
 				<ul class="nav nav-tabs mb-3">
 					<li class="nav-item">
 						<a href="#" class="nav-link active assign-tab-link" data-pane="pane-user">
-							<i class="fa fa-user me-1"></i> [[internalnotes:tab-user]]
+							<i class="fa fa-user me-1"></i> ${escapeHtml(tabUser)}
 						</a>
 					</li>
 					<li class="nav-item">
 						<a href="#" class="nav-link assign-tab-link" data-pane="pane-group">
-							<i class="fa fa-users me-1"></i> [[internalnotes:tab-group]]
+							<i class="fa fa-users me-1"></i> ${escapeHtml(tabGroup)}
 						</a>
 					</li>
 				</ul>
 				<div id="pane-user" class="assign-tab-pane">
 					<div class="mb-3 position-relative">
-						<input type="text" class="form-control" id="assign-user-input" placeholder="[[internalnotes:search-user-placeholder]]" autocomplete="off" />
+						<input type="text" class="form-control" id="assign-user-input" placeholder="${escapeHtml(searchUserPlaceholder)}" autocomplete="off" />
 						<div id="assign-user-suggestions" class="list-group assign-suggestions"></div>
 					</div>
 				</div>
 				<div id="pane-group" class="assign-tab-pane" style="display:none;">
 					<div class="mb-3 position-relative">
-						<input type="text" class="form-control" id="assign-group-input" placeholder="[[internalnotes:search-group-placeholder]]" autocomplete="off" />
+						<input type="text" class="form-control" id="assign-group-input" placeholder="${escapeHtml(searchGroupPlaceholder)}" autocomplete="off" />
 						<div id="assign-group-suggestions" class="list-group assign-suggestions"></div>
 					</div>
 				</div>
 				<div id="assign-selection" class="alert alert-secondary d-none mt-2">
-					<small class="text-muted">[[internalnotes:selected]]:</small>
+					<small class="text-muted">${escapeHtml(selectedLabel)}:</small>
 					<strong id="assign-selection-label"></strong>
 				</div>
 			</div>
 		`;
 
 		const dialog = bootbox.dialog({
-			title: '<i class="fa fa-user-plus me-2"></i> [[internalnotes:assign-modal-title]]',
+			title: '<i class="fa fa-user-plus me-2"></i> ' + escapeHtml(assignModalTitle),
 			message: bodyHtml,
 			buttons: {
 				cancel: {
-					label: '[[internalnotes:cancel]]',
+					label: cancelLabel,
 					className: 'btn-secondary',
 				},
 				confirm: {
-					label: '[[internalnotes:assign-confirm]]',
+					label: assignConfirmLabel,
 					className: 'btn-primary',
 					callback: async function () {
 						if (!selectedType || !selectedId) {
-							alerts.error('[[internalnotes:select-target-first]]');
+							alerts.error(selectTargetFirst);
 							return false;
 						}
 						try {
 							await api.put(`/plugins/internalnotes/${tid}/assign`, { type: selectedType, id: selectedId });
 							await loadAssignee(tid);
-							alerts.success('[[internalnotes:assigned-success]]');
+							alerts.success(assignedSuccess);
 						} catch (err) {
-							alerts.error(err.message || '[[error:unknown]]');
+							alerts.error(err.message || (await t('error-loading')));
 						}
 					},
 				},
@@ -291,9 +342,9 @@
 							await api.put(`/plugins/internalnotes/${tid}/assign`, { type: 'user', id: app.user.uid });
 							dialog.modal('hide');
 							await loadAssignee(tid);
-							alerts.success('[[internalnotes:assigned-success]]');
+							alerts.success(assignedSuccess);
 						} catch (err) {
-							alerts.error(err.message || '[[error:unknown]]');
+							alerts.error(err.message || (await t('error-loading')));
 						}
 					});
 				}
@@ -392,17 +443,17 @@
 		return div.innerHTML;
 	}
 
-	function openNotesPanel() {
+	async function openNotesPanel() {
 		const tid = getTid();
 		if (!tid) {
 			return;
 		}
 		if (!notesPanel) {
-			buildNotesPanel();
+			notesPanel = await buildNotesPanel();
 		}
 		notesPanel.classList.remove('hidden');
-		loadNotes(tid);
-		loadAssignee(tid);
+		await loadNotes(tid);
+		await loadAssignee(tid);
 	}
 
 	// --- Page lifecycle ---
