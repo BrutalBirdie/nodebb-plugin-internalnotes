@@ -162,8 +162,9 @@
 
 	async function renderAssignee(assignee, tid) {
 		const container = notesPanel.querySelector('.internal-notes-assignee');
-		const [notAssigned, assignedTo, unassignTitle, unassigned] = await Promise.all([
+		const [notAssigned, assignChangeLabel, assignedTo, unassignTitle, unassigned] = await Promise.all([
 			t('not-assigned'),
+			t('assign-change'),
 			t('assigned-to'),
 			t('unassign'),
 			t('unassigned'),
@@ -172,8 +173,12 @@
 			container.innerHTML = `
 				<div class="assignee-info">
 					<span class="text-muted"><i class="fa fa-user"></i> ${escapeHtml(notAssigned)}</span>
+					<button type="button" class="btn btn-xs btn-primary ms-2 assign-from-panel">
+						<i class="fa fa-user-plus me-1"></i> ${escapeHtml(assignChangeLabel)}
+					</button>
 				</div>
 			`;
+			container.querySelector('.assign-from-panel').addEventListener('click', () => showAssignModal(tid));
 			return;
 		}
 
@@ -192,15 +197,20 @@
 			<div class="assignee-info">
 				<i class="fa ${assignee.type === 'group' ? 'fa-users' : 'fa-user'}"></i>
 				${escapeHtml(assignedTo)} ${label}
-				<button class="btn btn-xs btn-link text-danger unassign-topic" title="${escapeHtml(unassignTitle)}">
+				<button type="button" class="btn btn-xs btn-link assign-from-panel" title="${escapeHtml(assignChangeLabel)}">
+					<i class="fa fa-pencil"></i>
+				</button>
+				<button type="button" class="btn btn-xs btn-link text-danger unassign-topic" title="${escapeHtml(unassignTitle)}">
 					<i class="fa fa-times"></i>
 				</button>
 			</div>
 		`;
+		container.querySelector('.assign-from-panel').addEventListener('click', () => showAssignModal(tid));
 		container.querySelector('.unassign-topic').addEventListener('click', async () => {
 			try {
 				await api.del(`/plugins/internalnotes/${tid}/assign`, {});
 				await loadAssignee(tid);
+				renderBadges();
 				alerts.success(unassigned);
 			} catch (err) {
 				alerts.error(err.message || (await t('error-loading')));
