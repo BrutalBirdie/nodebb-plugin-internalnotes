@@ -83,7 +83,7 @@ All endpoints require authentication and privileged access.
 
 ## Compatibility
 
-NodeBB v3.x and v4.x (`nbbpm.compatibility`: `^3.0.0 || ^4.0.0`). Tested on NodeBB 4.8.1.
+NodeBB v4.x (`nbbpm.compatibility`: `^4.0.0`). Tested on NodeBB 4.8.1.
 
 ## Development
 
