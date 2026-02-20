@@ -111,6 +111,32 @@
 	font-size: 0.75rem;
 	vertical-align: middle;
 	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+
+	.assignee-badge-avatar {
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		object-fit: cover;
+		vertical-align: middle;
+	}
+
+	.assignee-badge-fallback {
+		vertical-align: middle;
+	}
+
+	.assignee-badge-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		font-size: 0.7rem;
+		line-height: 1;
+	}
 }
 
 // Assign modal suggestion dropdowns

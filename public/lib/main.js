@@ -542,10 +542,6 @@
 		// If no headers found but we're on the topic page, use a single "virtual" pass with #content .topic-title
 		const headerList = headers.length ? Array.from(headers) : (isTopicPage ? [document.body] : []);
 
-		const assignedToLabel = await new Promise((resolve) => {
-			translator.translate('[[internalnotes:assigned-to]]', resolve);
-		});
-
 		headerList.forEach((headerEl) => {
 			const row = headerEl.closest && headerEl.closest('[data-tid]');
 			// On topic view there may be no [data-tid] parent; use current topic id. On list pages, get tid from row.
@@ -592,10 +588,18 @@
 				badge.className = 'badge bg-info text-dark ms-2 assignee-badge';
 				badge.style.cursor = 'pointer';
 				if (a.type === 'group') {
-					const icon = a.group.icon ? '<i class="' + escapeHtml(a.group.icon) + '"></i> ' : '<i class="fa fa-users"></i> ';
-					badge.innerHTML = icon + escapeHtml(assignedToLabel) + ' ' + escapeHtml(a.group.name);
+					const g = a.group;
+					const iconClass = g.icon || 'fa fa-users';
+					const iconStyle = g.labelColor ? ' style="background:' + escapeHtml(g.labelColor) + ';color:#fff"' : '';
+					const iconHtml = '<span class="assignee-badge-icon"' + iconStyle + '><i class="' + escapeHtml(iconClass) + '"></i></span> ';
+					badge.innerHTML = iconHtml + escapeHtml(g.name);
 				} else {
-					badge.innerHTML = '<i class="fa fa-user"></i> ' + escapeHtml(assignedToLabel) + ' ' + escapeHtml(a.user.username);
+					const u = a.user;
+					const avatarHtml = u.picture
+						? '<img class="assignee-badge-avatar" src="' + escapeHtml(u.picture) + '" alt="" onerror="this.style.display=\'none\';var n=this.nextElementSibling;if(n)n.style.display=\'inline\'">' +
+							'<i class="fa fa-user assignee-badge-fallback" style="display:none"></i> '
+						: '<i class="fa fa-user"></i> ';
+					badge.innerHTML = avatarHtml + escapeHtml(u.username);
 				}
 				badge.addEventListener('click', (e) => {
 					e.preventDefault();
