@@ -185,151 +185,155 @@
 	// --- Assign modal ---
 
 	function showAssignModal(tid) {
-		const existing = document.getElementById('assign-topic-modal');
-		if (existing) {
-			existing.remove();
-		}
+		let selectedType = null;
+		let selectedId = null;
 
-		const modalHtml = `
-			<div class="modal fade" id="assign-topic-modal" tabindex="-1" role="dialog">
-				<div class="modal-dialog" role="document">
-					<div class="modal-content">
-						<div class="modal-header">
-							<h5 class="modal-title"><i class="fa fa-user-plus me-2"></i>[[internalnotes:assign-modal-title]]</h5>
-							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-						</div>
-						<div class="modal-body">
-							<button type="button" class="btn btn-outline-primary w-100 mb-3" id="assign-self-btn">
-								<i class="fa fa-hand-pointer-o me-1"></i> [[internalnotes:assign-to-myself]]
-							</button>
-							<hr />
-							<ul class="nav nav-tabs mb-3" role="tablist">
-								<li class="nav-item" role="presentation">
-									<button class="nav-link active" id="tab-user" data-bs-toggle="tab" data-bs-target="#pane-user" type="button" role="tab">
-										<i class="fa fa-user me-1"></i> [[internalnotes:tab-user]]
-									</button>
-								</li>
-								<li class="nav-item" role="presentation">
-									<button class="nav-link" id="tab-group" data-bs-toggle="tab" data-bs-target="#pane-group" type="button" role="tab">
-										<i class="fa fa-users me-1"></i> [[internalnotes:tab-group]]
-									</button>
-								</li>
-							</ul>
-							<div class="tab-content">
-								<div class="tab-pane fade show active" id="pane-user" role="tabpanel">
-									<div class="mb-3 position-relative">
-										<input type="text" class="form-control" id="assign-user-input" placeholder="[[internalnotes:search-user-placeholder]]" autocomplete="off" />
-										<div id="assign-user-suggestions" class="list-group assign-suggestions"></div>
-									</div>
-								</div>
-								<div class="tab-pane fade" id="pane-group" role="tabpanel">
-									<div class="mb-3 position-relative">
-										<input type="text" class="form-control" id="assign-group-input" placeholder="[[internalnotes:search-group-placeholder]]" autocomplete="off" />
-										<div id="assign-group-suggestions" class="list-group assign-suggestions"></div>
-									</div>
-								</div>
-							</div>
-							<div id="assign-selection" class="alert alert-secondary d-none">
-								<small class="text-muted">[[internalnotes:selected]]:</small>
-								<strong id="assign-selection-label"></strong>
-							</div>
-						</div>
-						<div class="modal-footer">
-							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">[[internalnotes:cancel]]</button>
-							<button type="button" class="btn btn-primary" id="assign-confirm" disabled>[[internalnotes:assign-confirm]]</button>
-						</div>
+		const bodyHtml = `
+			<div class="assign-modal-body">
+				<button type="button" class="btn btn-outline-primary w-100 mb-3" id="assign-self-btn">
+					<i class="fa fa-hand-pointer-o me-1"></i> [[internalnotes:assign-to-myself]]
+				</button>
+				<hr />
+				<ul class="nav nav-tabs mb-3">
+					<li class="nav-item">
+						<a href="#" class="nav-link active assign-tab-link" data-pane="pane-user">
+							<i class="fa fa-user me-1"></i> [[internalnotes:tab-user]]
+						</a>
+					</li>
+					<li class="nav-item">
+						<a href="#" class="nav-link assign-tab-link" data-pane="pane-group">
+							<i class="fa fa-users me-1"></i> [[internalnotes:tab-group]]
+						</a>
+					</li>
+				</ul>
+				<div id="pane-user" class="assign-tab-pane">
+					<div class="mb-3 position-relative">
+						<input type="text" class="form-control" id="assign-user-input" placeholder="[[internalnotes:search-user-placeholder]]" autocomplete="off" />
+						<div id="assign-user-suggestions" class="list-group assign-suggestions"></div>
 					</div>
+				</div>
+				<div id="pane-group" class="assign-tab-pane" style="display:none;">
+					<div class="mb-3 position-relative">
+						<input type="text" class="form-control" id="assign-group-input" placeholder="[[internalnotes:search-group-placeholder]]" autocomplete="off" />
+						<div id="assign-group-suggestions" class="list-group assign-suggestions"></div>
+					</div>
+				</div>
+				<div id="assign-selection" class="alert alert-secondary d-none mt-2">
+					<small class="text-muted">[[internalnotes:selected]]:</small>
+					<strong id="assign-selection-label"></strong>
 				</div>
 			</div>
 		`;
 
-		document.body.insertAdjacentHTML('beforeend', modalHtml);
-		const modalEl = document.getElementById('assign-topic-modal');
-		const modal = new bootstrap.Modal(modalEl);
-		modal.show();
-
-		let selectedType = null;
-		let selectedId = null;
-
-		const selectionBox = modalEl.querySelector('#assign-selection');
-		const selectionLabel = modalEl.querySelector('#assign-selection-label');
-		const confirmBtn = modalEl.querySelector('#assign-confirm');
-
-		function setSelection(type, id, displayLabel) {
-			selectedType = type;
-			selectedId = id;
-			selectionLabel.textContent = displayLabel;
-			selectionBox.classList.remove('d-none');
-			confirmBtn.disabled = false;
-		}
-
-		// "Assign to myself"
-		modalEl.querySelector('#assign-self-btn').addEventListener('click', async () => {
-			try {
-				await api.put(`/plugins/internalnotes/${tid}/assign`, { type: 'user', id: app.user.uid });
-				modal.hide();
-				await loadAssignee(tid);
-				alerts.success('[[internalnotes:assigned-success]]');
-			} catch (err) {
-				alerts.error(err.message || '[[error:unknown]]');
-			}
-		});
-
-		// User search
-		setupSearchInput(
-			modalEl.querySelector('#assign-user-input'),
-			modalEl.querySelector('#assign-user-suggestions'),
-			async (query) => {
-				const result = await api.get(`/api/users`, { query, section: 'sort-posts' });
-				return (result && result.users ? result.users : []).slice(0, 10).map(u => ({
-					id: u.uid,
-					label: u.username,
-					picture: u.picture || '',
-					icon: null,
-				}));
+		const dialog = bootbox.dialog({
+			title: '<i class="fa fa-user-plus me-2"></i> [[internalnotes:assign-modal-title]]',
+			message: bodyHtml,
+			buttons: {
+				cancel: {
+					label: '[[internalnotes:cancel]]',
+					className: 'btn-secondary',
+				},
+				confirm: {
+					label: '[[internalnotes:assign-confirm]]',
+					className: 'btn-primary',
+					callback: async function () {
+						if (!selectedType || !selectedId) {
+							alerts.error('[[internalnotes:select-target-first]]');
+							return false;
+						}
+						try {
+							await api.put(`/plugins/internalnotes/${tid}/assign`, { type: selectedType, id: selectedId });
+							await loadAssignee(tid);
+							alerts.success('[[internalnotes:assigned-success]]');
+						} catch (err) {
+							alerts.error(err.message || '[[error:unknown]]');
+						}
+					},
+				},
 			},
-			(item) => {
-				setSelection('user', item.id, item.label);
-			}
-		);
+			onShown: function () {
+				const modalEl = dialog[0] || dialog.get(0);
 
-		// Group search
-		setupSearchInput(
-			modalEl.querySelector('#assign-group-input'),
-			modalEl.querySelector('#assign-group-suggestions'),
-			async (query) => {
-				const result = await api.get(`/plugins/internalnotes/groups/search`, { query });
-				return (result && result.groups ? result.groups : []).map(g => ({
-					id: g.name,
-					label: g.name,
-					picture: '',
-					icon: g.icon || 'fa-users',
-					memberCount: g.memberCount,
-				}));
+				// Tab switching
+				modalEl.querySelectorAll('.assign-tab-link').forEach((link) => {
+					link.addEventListener('click', (e) => {
+						e.preventDefault();
+						const targetPane = link.getAttribute('data-pane');
+						modalEl.querySelectorAll('.assign-tab-link').forEach(l => l.classList.remove('active'));
+						link.classList.add('active');
+						modalEl.querySelectorAll('.assign-tab-pane').forEach(p => { p.style.display = 'none'; });
+						const pane = modalEl.querySelector('#' + targetPane);
+						if (pane) {
+							pane.style.display = '';
+						}
+					});
+				});
+
+				function setSelection(type, id, displayLabel) {
+					selectedType = type;
+					selectedId = id;
+					const label = modalEl.querySelector('#assign-selection-label');
+					const box = modalEl.querySelector('#assign-selection');
+					if (label) {
+						label.textContent = displayLabel;
+					}
+					if (box) {
+						box.classList.remove('d-none');
+					}
+				}
+
+				// "Assign to myself"
+				const selfBtn = modalEl.querySelector('#assign-self-btn');
+				if (selfBtn) {
+					selfBtn.addEventListener('click', async () => {
+						try {
+							await api.put(`/plugins/internalnotes/${tid}/assign`, { type: 'user', id: app.user.uid });
+							dialog.modal('hide');
+							await loadAssignee(tid);
+							alerts.success('[[internalnotes:assigned-success]]');
+						} catch (err) {
+							alerts.error(err.message || '[[error:unknown]]');
+						}
+					});
+				}
+
+				// User search
+				setupSearchInput(
+					modalEl.querySelector('#assign-user-input'),
+					modalEl.querySelector('#assign-user-suggestions'),
+					async (query) => {
+						const result = await api.get(`/api/users`, { query, section: 'sort-posts' });
+						return (result && result.users ? result.users : []).slice(0, 10).map(u => ({
+							id: u.uid,
+							label: u.username,
+							picture: u.picture || '',
+							icon: null,
+						}));
+					},
+					(item) => {
+						setSelection('user', item.id, item.label);
+					}
+				);
+
+				// Group search
+				setupSearchInput(
+					modalEl.querySelector('#assign-group-input'),
+					modalEl.querySelector('#assign-group-suggestions'),
+					async (query) => {
+						const result = await api.get(`/plugins/internalnotes/groups/search`, { query });
+						return (result && result.groups ? result.groups : []).map(g => ({
+							id: g.name,
+							label: g.name,
+							picture: '',
+							icon: g.icon || 'fa-users',
+							memberCount: g.memberCount,
+						}));
+					},
+					(item) => {
+						setSelection('group', item.id, item.label);
+					}
+				);
 			},
-			(item) => {
-				setSelection('group', item.id, item.label);
-			}
-		);
-
-		// Confirm
-		confirmBtn.addEventListener('click', async () => {
-			if (!selectedType || !selectedId) {
-				alerts.error('[[internalnotes:select-target-first]]');
-				return;
-			}
-			try {
-				await api.put(`/plugins/internalnotes/${tid}/assign`, { type: selectedType, id: selectedId });
-				modal.hide();
-				await loadAssignee(tid);
-				alerts.success('[[internalnotes:assigned-success]]');
-			} catch (err) {
-				alerts.error(err.message || '[[error:unknown]]');
-			}
-		});
-
-		modalEl.addEventListener('hidden.bs.modal', () => {
-			modalEl.remove();
 		});
 	}
 
