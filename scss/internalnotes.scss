@@ -50,6 +50,14 @@
 		gap: 6px;
 		flex-wrap: wrap;
 	}
+
+	.avatar-xs {
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		object-fit: cover;
+		vertical-align: middle;
+	}
 }
 
 .internal-notes-list {
