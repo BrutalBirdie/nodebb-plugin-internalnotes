@@ -1,6 +1,6 @@
 # nodebb-plugin-internalnotes
 
-A NodeBB plugin that adds **internal staff notes** and **topic assignment** to forum topics. Notes and assignments are only visible to privileged users (administrators, global moderators, and optionally category moderators). They are completely invisible to everyone else.
+A NodeBB plugin that adds **internal staff notes** and **topic assignment** to forum topics. By default only administrators can see and manage notes and assignments; you can optionally allow global moderators and/or category moderators in the plugin settings. They are completely invisible to everyone else.
 
 **Version:** 1.0.0 · **NodeBB:** 3.x & 4.x (tested on 4.8.1)
 
@@ -9,9 +9,9 @@ A NodeBB plugin that adds **internal staff notes** and **topic assignment** to f
 - **Internal Notes** — Add, view, and delete private notes on any topic. Notes are stored per-topic and include the author and timestamp.
 - **Topic Assignment (User or Group)** — Assign a topic to a specific user or an entire group. All members of an assigned group receive a notification.
 - **"Assign to myself"** — The first option in the assignment modal lets the current user instantly assign the topic to themselves.
-- **Permission-based visibility** — Notes, assignment badges, and the thread tool buttons are completely invisible to regular users. Only admins, global mods, and (optionally) category mods can see them. No DOM elements are rendered for unprivileged users.
+- **Permission-based visibility** — Notes, assignment badges, and the thread tool buttons are completely invisible to regular users. By default only admins can see them; you can enable global moderators and/or category moderators in the plugin settings. No DOM elements are rendered for unprivileged users.
 - **Thread Tools integration** — "Internal Notes" and "Assign Topic" options appear in the topic thread tools dropdown for privileged users only.
-- **Admin settings page** — Configure whether category moderators can access notes (ACP > Plugins > Internal Notes & Assignments).
+- **Admin settings page** — Configure who can access notes: allow global moderators and/or category moderators (ACP > Plugins > Internal Notes & Assignments).
 
 ## Installation
 
@@ -35,11 +35,12 @@ npm link /path/to/nodebb-plugin-internalnotes
 
 Navigate to **ACP > Plugins > Internal Notes & Assignments** to configure:
 
-- **Allow category moderators** — Enable this to let category moderators (not just admins and global mods) view and manage internal notes and assignments.
+- **Allow global moderators** — Enable to let global moderators view and manage internal notes and assignments (default: off; only admins have access).
+- **Allow category moderators** — Enable to let category moderators view and manage internal notes in their categories (default: off).
 
 ## Usage
 
-1. Navigate to any topic as an admin or moderator.
+1. Navigate to any topic as a user who has access (admin, or global/category moderator if enabled in settings).
 2. Open the **Thread Tools** dropdown (the wrench icon).
 3. Click **Internal Notes** to open the notes side panel, or **Assign Topic** to assign the topic.
 

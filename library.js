@@ -211,10 +211,13 @@ async function canViewNotes(uid) {
 		user.isAdministrator(uid),
 		user.isGlobalModerator(uid),
 	]);
-	if (isAdmin || isGlobalMod) {
+	if (isAdmin) {
 		return true;
 	}
 	const settings = await meta.settings.get('internalnotes');
+	if (settings.allowGlobalMods === 'on' && isGlobalMod) {
+		return true;
+	}
 	if (settings.allowCategoryMods === 'on') {
 		const isModOfAny = await user.isModeratorOfAnyCategory(uid);
 		return isModOfAny;
