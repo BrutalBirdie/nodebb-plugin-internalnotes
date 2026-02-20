@@ -1,0 +1,17 @@
+# Dependencies and dev tooling
+node_modules/
+
+# Version control and OS
+.git/
+.gitignore
+.DS_Store
+Thumbs.db
+
+# IDE and local config
+*.log
+sftp-config.json
+.env
+.env.*
+
+# Optional: exclude audit doc from package (uncomment if desired)
+# NODEBB_STANDARDS_AUDIT.md
