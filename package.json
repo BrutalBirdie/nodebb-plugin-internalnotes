@@ -23,6 +23,6 @@
     "url": "https://github.com/eha/nodebb-plugin-internalnotes/issues"
   },
   "nbbpm": {
-    "compatibility": "^3.0.0"
+    "compatibility": "^3.0.0 || ^4.0.0"
   }
 }

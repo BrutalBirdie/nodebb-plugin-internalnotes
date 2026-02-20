@@ -2,6 +2,8 @@
 
 A NodeBB plugin that adds **internal staff notes** and **topic assignment** to forum topics. Notes and assignments are only visible to privileged users (administrators, global moderators, and optionally category moderators). They are completely invisible to everyone else.
 
+**Version:** 1.0.0 · **NodeBB:** 3.x & 4.x (tested on 4.8.1)
+
 ## Features
 
 - **Internal Notes** — Add, view, and delete private notes on any topic. Notes are stored per-topic and include the author and timestamp.
@@ -9,7 +11,7 @@ A NodeBB plugin that adds **internal staff notes** and **topic assignment** to f
 - **"Assign to myself"** — The first option in the assignment modal lets the current user instantly assign the topic to themselves.
 - **Permission-based visibility** — Notes, assignment badges, and the thread tool buttons are completely invisible to regular users. Only admins, global mods, and (optionally) category mods can see them. No DOM elements are rendered for unprivileged users.
 - **Thread Tools integration** — "Internal Notes" and "Assign Topic" options appear in the topic thread tools dropdown for privileged users only.
-- **Admin settings page** — Configure whether category moderators can access notes (ACP > Plugins > Internal Notes).
+- **Admin settings page** — Configure whether category moderators can access notes (ACP > Plugins > Internal Notes & Assignments).
 
 ## Installation
 
@@ -80,7 +82,12 @@ All endpoints require authentication and privileged access.
 
 ## Compatibility
 
-NodeBB v3.x
+NodeBB v3.x and v4.x (`nbbpm.compatibility`: `^3.0.0 || ^4.0.0`). Tested on NodeBB 4.8.1.
+
+## Development
+
+- The plugin follows [NodeBB plugin standards](https://docs.nodebb.org/development/plugins/); see [NODEBB_STANDARDS_AUDIT.md](NODEBB_STANDARDS_AUDIT.md) for a full audit.
+- Lint: `npm run lint` (ESLint).
 
 ## License
 
