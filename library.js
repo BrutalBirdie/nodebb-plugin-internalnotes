@@ -8,6 +8,9 @@ const notifications = require.main.require('./src/notifications');
 const routeHelpers = require.main.require('./src/routes/helpers');
 const controllerHelpers = require.main.require('./src/controllers/helpers');
 const topics = require.main.require('./src/topics');
+const privileges = require.main.require('./src/privileges');
+const pagination = require.main.require('./src/pagination');
+const helpers = require.main.require('./src/controllers/helpers');
 
 const controllers = require('./lib/controllers');
 
@@ -15,7 +18,9 @@ const plugin = {};
 
 plugin.init = async (params) => {
 	const { router } = params;
+	const middleware = require.main.require('./src/middleware');
 	routeHelpers.setupAdminPageRoute(router, '/admin/plugins/internalnotes', controllers.renderAdminPage);
+	routeHelpers.setupPageRoute(router, '/assigned', [middleware.ensureLoggedIn], plugin.renderAssignedPage);
 };
 
 plugin.addRoutes = async ({ router, middleware, helpers }) => {
@@ -154,11 +159,46 @@ plugin.purgeTopicNotes = async ({ topic }) => {
 		return;
 	}
 	const tid = topic.tid;
+	await removeTidFromAssigneeSet(tid);
 	const noteIds = await db.getSortedSetRange(`internalnotes:tid:${tid}`, 0, -1);
 	const keys = noteIds.map(id => `internalnote:${id}`);
 	await db.deleteAll(keys);
 	await db.delete(`internalnotes:tid:${tid}`);
 	await db.deleteObjectFields(`topic:${tid}`, ['assignee', 'assigneeType']);
+};
+
+plugin.addNavigation = (menu) => {
+	menu = menu.concat([{
+		route: '/assigned',
+		title: '[[internalnotes:menu.assigned]]',
+		iconClass: 'fa-user-check',
+		textClass: 'visible-xs-inline',
+		text: '[[internalnotes:menu.assigned]]',
+	}]);
+	return menu;
+};
+
+plugin.renderAssignedPage = async (req, res) => {
+	const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+	const uid = req.uid;
+	const [settings, tidsAll] = await Promise.all([
+		user.getSettings(uid),
+		getAssignedTids(uid),
+	]);
+	let tids = await privileges.topics.filterTids('read', tidsAll, uid);
+	const start = Math.max(0, (page - 1) * settings.topicsPerPage);
+	const stop = start + settings.topicsPerPage - 1;
+	const pageTids = tids.slice(start, stop + 1);
+	const topicsData = await topics.getTopicsByTids(pageTids, uid);
+	topics.calculateTopicIndices(topicsData, start);
+	const pageCount = Math.max(1, Math.ceil(tids.length / settings.topicsPerPage));
+	const data = {
+		topics: topicsData,
+		title: '[[internalnotes:menu.assigned]]',
+		breadcrumbs: helpers.buildBreadcrumbs([{ text: '[[internalnotes:menu.assigned]]' }]),
+		pagination: pagination.create(page, pageCount),
+	};
+	res.render('recent', data);
 };
 
 // --- Permission helpers ---
@@ -245,6 +285,18 @@ async function assignTopic(tid, type, id, callerUid) {
 	throw new Error('[[error:invalid-data]]');
 }
 
+async function removeTidFromAssigneeSet(tid) {
+	const topicData = await db.getObjectFields(`topic:${tid}`, ['assignee', 'assigneeType']);
+	if (!topicData || !topicData.assignee) {
+		return;
+	}
+	if (topicData.assigneeType === 'group') {
+		await db.sortedSetRemove(`group:${topicData.assignee}:assignedTids`, tid);
+	} else {
+		await db.sortedSetRemove(`uid:${topicData.assignee}:assignedTids`, tid);
+	}
+}
+
 async function assignToUser(tid, assigneeUid, callerUid) {
 	const parsedUid = parseInt(assigneeUid, 10);
 	if (parsedUid <= 0) {
@@ -256,7 +308,12 @@ async function assignToUser(tid, assigneeUid, callerUid) {
 		throw new Error('[[error:no-user]]');
 	}
 
-	await db.setObject(`topic:${tid}`, { assignee: parsedUid, assigneeType: 'user' });
+	await removeTidFromAssigneeSet(tid);
+	const ts = Date.now();
+	await Promise.all([
+		db.setObject(`topic:${tid}`, { assignee: parsedUid, assigneeType: 'user' }),
+		db.sortedSetAdd(`uid:${parsedUid}:assignedTids`, ts, tid),
+	]);
 
 	if (parsedUid !== parseInt(callerUid, 10)) {
 		const topicData = await topics.getTopicFields(tid, ['title', 'slug']);
@@ -287,7 +344,12 @@ async function assignToGroup(tid, groupName, callerUid) {
 		throw new Error('[[error:no-group]]');
 	}
 
-	await db.setObject(`topic:${tid}`, { assignee: groupName, assigneeType: 'group' });
+	await removeTidFromAssigneeSet(tid);
+	const ts = Date.now();
+	await Promise.all([
+		db.setObject(`topic:${tid}`, { assignee: groupName, assigneeType: 'group' }),
+		db.sortedSetAdd(`group:${groupName}:assignedTids`, ts, tid),
+	]);
 
 	const topicData = await topics.getTopicFields(tid, ['title', 'slug']);
 	const memberUids = await groups.getMembers(groupName, 0, -1);
@@ -311,6 +373,7 @@ async function assignToGroup(tid, groupName, callerUid) {
 }
 
 async function unassignTopic(tid) {
+	await removeTidFromAssigneeSet(tid);
 	await db.deleteObjectFields(`topic:${tid}`, ['assignee', 'assigneeType']);
 }
 
@@ -339,6 +402,30 @@ async function getAssignee(tid) {
 	}
 	const userData = await user.getUserFields(uid, ['uid', 'username', 'picture', 'userslug']);
 	return { type: 'user', user: userData };
+}
+
+async function getAssignedTids(uid) {
+	const byScore = {};
+	const addFromSet = async (setKey) => {
+		const list = await db.getSortedSetRevRangeWithScores(setKey, 0, -1);
+		for (const { value, score } of list) {
+			const tid = parseInt(value, 10);
+			if (tid && (!byScore[tid] || score > byScore[tid])) {
+				byScore[tid] = score;
+			}
+		}
+	};
+	await addFromSet(`uid:${uid}:assignedTids`);
+	const userGroupsList = await groups.getUserGroups([uid]);
+	const groupNames = (userGroupsList && userGroupsList[0]) ? userGroupsList[0].map(g => g.name) : [];
+	for (const name of groupNames) {
+		await addFromSet(`group:${name}:assignedTids`);
+	}
+	const tids = Object.keys(byScore)
+		.map(t => ({ tid: parseInt(t, 10), score: byScore[t] }))
+		.sort((a, b) => b.score - a.score)
+		.map(x => x.tid);
+	return tids;
 }
 
 module.exports = plugin;
