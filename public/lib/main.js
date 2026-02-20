@@ -434,21 +434,31 @@
 			existingAssigneeBadge.remove();
 		}
 
-		const topicTitle = document.querySelector('[component="topic/header"]') ||
-			document.querySelector('.topic-header') ||
-			document.querySelector('h1');
+		// Target the topic title in main content only (not the site title in header)
+		const topicTitle = document.querySelector('#content [component="topic/title"]') ||
+			document.querySelector('#content .topic-title') ||
+			document.querySelector('[component="topic/header"] [component="topic/title"]') ||
+			document.querySelector('[component="topic/header"] .topic-title') ||
+			document.querySelector('#content [component="topic/header"]');
 
-		if (topicTitle && ajaxify.data.internalNoteCount > 0) {
+		// Prefer the title's container so the badge sits next to the title text
+		const badgeContainer = topicTitle && topicTitle.classList && topicTitle.classList.contains('topic-title')
+			? topicTitle
+			: topicTitle && topicTitle.parentElement && topicTitle.parentElement.classList.contains('topic-title')
+				? topicTitle.parentElement
+				: topicTitle;
+
+		if (badgeContainer && ajaxify.data.internalNoteCount > 0) {
 			const badge = document.createElement('span');
 			badge.id = 'internal-notes-badge';
 			badge.className = 'badge bg-warning text-dark ms-2 internal-notes-badge';
 			badge.style.cursor = 'pointer';
 			badge.innerHTML = `<i class="fa fa-sticky-note"></i> ${ajaxify.data.internalNoteCount}`;
 			badge.addEventListener('click', openNotesPanel);
-			topicTitle.appendChild(badge);
+			badgeContainer.appendChild(badge);
 		}
 
-		if (ajaxify.data.assignee && topicTitle) {
+		if (ajaxify.data.assignee && badgeContainer) {
 			const a = ajaxify.data.assignee;
 			const badge = document.createElement('span');
 			badge.id = 'assignee-badge';
@@ -462,7 +472,7 @@
 				badge.innerHTML = `<i class="fa fa-user"></i> ${escapeHtml(a.user.username)}`;
 			}
 			badge.addEventListener('click', openNotesPanel);
-			topicTitle.appendChild(badge);
+			badgeContainer.appendChild(badge);
 		}
 	}
 
