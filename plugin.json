@@ -1,6 +1,6 @@
 {
     "id": "nodebb-plugin-internalnotes",
-    "url": "https://github.com/eha/nodebb-plugin-internalnotes",
+    "url": "https://github.com/BrutalBirdie/nodebb-plugin-internalnotes",
     "library": "./library.js",
     "hooks": [
         {
