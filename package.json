@@ -1,0 +1,28 @@
+{
+  "name": "nodebb-plugin-internalnotes",
+  "version": "1.0.0",
+  "description": "Add internal staff notes and assignees to topics in NodeBB. Notes are only visible to privileged users (moderators/admins).",
+  "main": "library.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eha/nodebb-plugin-internalnotes"
+  },
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "nodebb",
+    "plugin",
+    "internal-notes",
+    "staff-notes",
+    "topic-assign",
+    "moderation"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/eha/nodebb-plugin-internalnotes/issues"
+  },
+  "nbbpm": {
+    "compatibility": "^3.0.0"
+  }
+}
