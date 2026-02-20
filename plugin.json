@@ -7,18 +7,13 @@
     { "hook": "static:api.routes", "method": "addRoutes" },
     { "hook": "filter:admin.header.build", "method": "addAdminNavigation" },
     { "hook": "filter:topic.get", "method": "addInternalNotesToTopic" },
+    { "hook": "filter:topics.get", "method": "addInternalNotesToTopics" },
     { "hook": "filter:topic.thread_tools", "method": "addThreadTools" },
     { "hook": "action:topic.purge", "method": "purgeTopicNotes" }
   ],
-  "scss": [
-    "scss/internalnotes.scss"
-  ],
-  "scripts": [
-    "public/lib/main.js"
-  ],
-  "acpScripts": [
-    "public/lib/acp-main.js"
-  ],
+  "scss": ["scss/internalnotes.scss"],
+  "scripts": ["public/lib/main.js"],
+  "acpScripts": ["public/lib/acp-main.js"],
   "modules": {
     "../admin/plugins/internalnotes.js": "./public/lib/admin.js"
   },

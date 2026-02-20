@@ -113,6 +113,25 @@ plugin.addInternalNotesToTopic = async (data) => {
 	return data;
 };
 
+plugin.addInternalNotesToTopics = async (data) => {
+	if (!data || !Array.isArray(data.topics) || !data.topics.length) {
+		return data;
+	}
+	const uid = data.uid || 0;
+	const allowed = await canViewNotes(uid);
+	if (!allowed) {
+		return data;
+	}
+	const assignees = await Promise.all(data.topics.map(t => getAssignee(t.tid)));
+	const noteCounts = await Promise.all(data.topics.map(t => db.sortedSetCard(`internalnotes:tid:${t.tid}`)));
+	data.topics.forEach((topic, i) => {
+		topic.canViewInternalNotes = true;
+		topic.assignee = assignees[i];
+		topic.internalNoteCount = noteCounts[i];
+	});
+	return data;
+};
+
 plugin.addThreadTools = async (data) => {
 	const allowed = await canViewNotes(data.uid);
 	if (allowed) {

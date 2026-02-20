@@ -216,6 +216,7 @@
 
 		const [
 			assignToMyself,
+			assignNoOne,
 			tabUser,
 			tabGroup,
 			searchUserPlaceholder,
@@ -226,8 +227,10 @@
 			assignConfirmLabel,
 			selectTargetFirst,
 			assignedSuccess,
+			unassigned,
 		] = await Promise.all([
 			t('assign-to-myself'),
+			t('assign-no-one'),
 			t('tab-user'),
 			t('tab-group'),
 			t('search-user-placeholder'),
@@ -238,12 +241,16 @@
 			t('assign-confirm'),
 			t('select-target-first'),
 			t('assigned-success'),
+			t('unassigned'),
 		]);
 
 		const bodyHtml = `
 			<div class="assign-modal-body">
-				<button type="button" class="btn btn-outline-primary w-100 mb-3" id="assign-self-btn">
+				<button type="button" class="btn btn-outline-primary w-100 mb-2" id="assign-self-btn">
 					<i class="fa fa-hand-pointer-o me-1"></i> ${escapeHtml(assignToMyself)}
+				</button>
+				<button type="button" class="btn btn-outline-secondary w-100 mb-3" id="assign-no-one-btn">
+					<i class="fa fa-user-times me-1"></i> ${escapeHtml(assignNoOne)}
 				</button>
 				<hr />
 				<ul class="nav nav-tabs mb-3">
@@ -341,8 +348,29 @@
 						try {
 							await api.put(`/plugins/internalnotes/${tid}/assign`, { type: 'user', id: app.user.uid });
 							dialog.modal('hide');
-							await loadAssignee(tid);
+							if (notesPanel && !notesPanel.classList.contains('hidden')) {
+								await loadAssignee(tid);
+							}
+							renderBadges();
 							alerts.success(assignedSuccess);
+						} catch (err) {
+							alerts.error(err.message || (await t('error-loading')));
+						}
+					});
+				}
+
+				// "Assign to no one"
+				const noOneBtn = modalEl.querySelector('#assign-no-one-btn');
+				if (noOneBtn) {
+					noOneBtn.addEventListener('click', async () => {
+						try {
+							await api.del(`/plugins/internalnotes/${tid}/assign`, {});
+							dialog.modal('hide');
+							if (notesPanel && !notesPanel.classList.contains('hidden')) {
+								await loadAssignee(tid);
+							}
+							renderBadges();
+							alerts.success(unassigned);
 						} catch (err) {
 							alerts.error(err.message || (await t('error-loading')));
 						}
@@ -460,75 +488,117 @@
 
 	hooks.on('action:ajaxify.end', () => {
 		const tid = getTid();
-		if (!tid) {
-			if (notesPanel) {
-				notesPanel.classList.add('hidden');
-			}
-			return;
+		if (!tid && notesPanel) {
+			notesPanel.classList.add('hidden');
 		}
-		if (ajaxify.data.canViewInternalNotes) {
-			renderBadges();
-		}
+		// Run for both single-topic page and topic list pages (category, recent, etc.)
+		renderBadges();
 	});
 
-	async function renderBadges() {
-		const tid = getTid();
-		if (!tid) {
-			return;
+	function getTopicDataForTid(tid) {
+		if (ajaxify.data.tid === tid) {
+			return ajaxify.data;
 		}
+		const topics = ajaxify.data.topics || ajaxify.data.category?.topics || [];
+		return topics.find(t => t && t.tid === tid) || null;
+	}
 
-		const existingBadge = document.getElementById('internal-notes-badge');
-		if (existingBadge) {
-			existingBadge.remove();
-		}
-		const existingAssigneeBadge = document.getElementById('assignee-badge');
-		if (existingAssigneeBadge) {
-			existingAssigneeBadge.remove();
-		}
-
-		// Target the topic title in main content only (not the site title in header)
-		const topicTitle = document.querySelector('#content [component="topic/title"]') ||
-			document.querySelector('#content .topic-title') ||
-			document.querySelector('[component="topic/header"] [component="topic/title"]') ||
-			document.querySelector('[component="topic/header"] .topic-title') ||
-			document.querySelector('#content [component="topic/header"]');
-
-		// Prefer the title's container so the badge sits next to the title text
-		const badgeContainer = topicTitle && topicTitle.classList && topicTitle.classList.contains('topic-title')
-			? topicTitle
-			: topicTitle && topicTitle.parentElement && topicTitle.parentElement.classList.contains('topic-title')
-				? topicTitle.parentElement
-				: topicTitle;
-
-		if (badgeContainer && ajaxify.data.internalNoteCount > 0) {
-			const badge = document.createElement('span');
-			badge.id = 'internal-notes-badge';
-			badge.className = 'badge bg-warning text-dark ms-2 internal-notes-badge';
-			badge.style.cursor = 'pointer';
-			badge.innerHTML = `<i class="fa fa-sticky-note"></i> ${ajaxify.data.internalNoteCount}`;
-			badge.addEventListener('click', openNotesPanel);
-			badgeContainer.appendChild(badge);
-		}
-
-		if (ajaxify.data.assignee && badgeContainer) {
-			const assignedToLabel = await new Promise((resolve) => {
-				translator.translate('[[internalnotes:assigned-to]]', resolve);
-			});
-			const a = ajaxify.data.assignee;
-			const badge = document.createElement('span');
-			badge.id = 'assignee-badge';
-			badge.style.cursor = 'pointer';
-			if (a.type === 'group') {
-				const icon = a.group.icon ? `<i class="${escapeHtml(a.group.icon)}"></i> ` : '<i class="fa fa-users"></i> ';
-				badge.className = 'badge bg-info text-dark ms-2 assignee-badge';
-				badge.innerHTML = icon + escapeHtml(assignedToLabel) + ' ' + escapeHtml(a.group.name);
-			} else {
-				badge.className = 'badge bg-info text-dark ms-2 assignee-badge';
-				badge.innerHTML = '<i class="fa fa-user"></i> ' + escapeHtml(assignedToLabel) + ' ' + escapeHtml(a.user.username);
+	function getBadgeContainer(headerEl, isCurrentTopic) {
+		// On topic view, prefer the main .topic-title in #content so badges always show next to the title
+		if (isCurrentTopic) {
+			const inContent = document.querySelector('#content .topic-title') ||
+				document.querySelector('#content [component="topic/header"] .topic-title');
+			const titleComponent = document.querySelector('#content [component="topic/title"]');
+			if (inContent) {
+				return inContent;
 			}
-			badge.addEventListener('click', openNotesPanel);
-			badgeContainer.appendChild(badge);
+			if (titleComponent && titleComponent.parentElement && titleComponent.parentElement.classList.contains('topic-title')) {
+				return titleComponent.parentElement;
+			}
 		}
+		const titleEl = headerEl.querySelector('[component="topic/title"]') || headerEl.querySelector('.topic-title');
+		if (titleEl && titleEl.classList.contains('topic-title')) {
+			return titleEl;
+		}
+		if (titleEl && titleEl.parentElement && titleEl.parentElement.classList.contains('topic-title')) {
+			return titleEl.parentElement;
+		}
+		return headerEl;
+	}
+
+	async function renderBadges() {
+		const headers = document.querySelectorAll('[component="topic/header"]');
+		const isTopicPage = ajaxify.data.tid && ajaxify.data.canViewInternalNotes;
+		// If no headers found but we're on the topic page, use a single "virtual" pass with #content .topic-title
+		const headerList = headers.length ? Array.from(headers) : (isTopicPage ? [document.body] : []);
+
+		const assignedToLabel = await new Promise((resolve) => {
+			translator.translate('[[internalnotes:assigned-to]]', resolve);
+		});
+
+		headerList.forEach((headerEl) => {
+			const row = headerEl.closest && headerEl.closest('[data-tid]');
+			// On topic view there may be no [data-tid] parent; use current topic id. On list pages, get tid from row.
+			const tid = row ? parseInt(row.getAttribute('data-tid'), 10) : (ajaxify.data.tid || null);
+			if (!tid) {
+				return;
+			}
+
+			const topic = getTopicDataForTid(tid);
+			if (!topic || !topic.canViewInternalNotes) {
+				return;
+			}
+
+			const isCurrentTopic = ajaxify.data.tid === tid;
+			const badgeContainer = getBadgeContainer(headerEl, isCurrentTopic);
+			if (!badgeContainer) {
+				return;
+			}
+			// Remove any existing badges we added (from this container to avoid duplicates)
+			badgeContainer.querySelectorAll('.internal-notes-badge, .assignee-badge').forEach((el) => el.remove());
+
+			if (topic.internalNoteCount > 0) {
+				const badge = document.createElement('span');
+				badge.id = 'internal-notes-badge-' + tid;
+				badge.className = 'badge bg-warning text-dark ms-2 internal-notes-badge';
+				badge.style.cursor = 'pointer';
+				badge.innerHTML = '<i class="fa fa-sticky-note"></i> ' + topic.internalNoteCount;
+				badge.addEventListener('click', (e) => {
+					e.preventDefault();
+					if (isCurrentTopic) {
+						openNotesPanel();
+					} else {
+						const path = topic.slug ? 'topic/' + topic.slug : 'topic/' + topic.tid;
+						ajaxify.go(path, undefined, true);
+					}
+				});
+				badgeContainer.appendChild(badge);
+			}
+
+			if (topic.assignee) {
+				const a = topic.assignee;
+				const badge = document.createElement('span');
+				badge.id = 'assignee-badge-' + tid;
+				badge.className = 'badge bg-info text-dark ms-2 assignee-badge';
+				badge.style.cursor = 'pointer';
+				if (a.type === 'group') {
+					const icon = a.group.icon ? '<i class="' + escapeHtml(a.group.icon) + '"></i> ' : '<i class="fa fa-users"></i> ';
+					badge.innerHTML = icon + escapeHtml(assignedToLabel) + ' ' + escapeHtml(a.group.name);
+				} else {
+					badge.innerHTML = '<i class="fa fa-user"></i> ' + escapeHtml(assignedToLabel) + ' ' + escapeHtml(a.user.username);
+				}
+				badge.addEventListener('click', (e) => {
+					e.preventDefault();
+					if (isCurrentTopic) {
+						openNotesPanel();
+					} else {
+						const path = topic.slug ? 'topic/' + topic.slug : 'topic/' + topic.tid;
+						ajaxify.go(path, undefined, true);
+					}
+				});
+				badgeContainer.appendChild(badge);
+			}
+		});
 	}
 
 	// --- Thread tool click handlers ---
