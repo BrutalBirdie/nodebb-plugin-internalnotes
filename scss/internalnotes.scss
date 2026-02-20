@@ -133,6 +133,7 @@
 
 	.assignee-badge-fallback {
 		vertical-align: middle;
+		background: none !important;
 	}
 
 	.assignee-badge-icon {
@@ -144,6 +145,8 @@
 		border-radius: 50%;
 		font-size: 0.7rem;
 		line-height: 1;
+		// background only when set inline (e.g. group labelColor)
+		background-color: transparent;
 	}
 }
 

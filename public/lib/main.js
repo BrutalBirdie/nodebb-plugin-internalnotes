@@ -590,8 +590,9 @@
 				if (a.type === 'group') {
 					const g = a.group;
 					const iconClass = g.icon || 'fa fa-users';
-					const iconStyle = g.labelColor ? ' style="background:' + escapeHtml(g.labelColor) + ';color:#fff"' : '';
-					const iconHtml = '<span class="assignee-badge-icon"' + iconStyle + '><i class="' + escapeHtml(iconClass) + '"></i></span> ';
+					const iconHtml = g.labelColor
+						? '<span class="assignee-badge-icon" style="background:' + escapeHtml(g.labelColor) + ';color:#fff"><i class="' + escapeHtml(iconClass) + '"></i></span> '
+						: '<i class="fa ' + (g.icon ? escapeHtml(g.icon.replace(/^fa\s+/, '')) : 'fa-users') + '"></i> ';
 					badge.innerHTML = iconHtml + escapeHtml(g.name);
 				} else {
 					const u = a.user;
