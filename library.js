@@ -280,7 +280,7 @@ async function getAssignableUsers() {
 	let adminUids = [];
 	try {
 		adminUids = await groups.getMembers('administrators', 0, -1);
-	} catch (e) {
+	} catch (_e) {
 		// ignore
 	}
 	adminUids.forEach((uid) => uidSet.add(parseInt(uid, 10)));
@@ -290,7 +290,7 @@ async function getAssignableUsers() {
 		let globalModUids = [];
 		try {
 			globalModUids = await groups.getMembers('Global Moderators', 0, -1);
-		} catch (e) {
+		} catch (_e) {
 			// ignore
 		}
 		globalModUids.forEach((uid) => uidSet.add(parseInt(uid, 10)));
@@ -311,7 +311,7 @@ async function getAssignableUsers() {
 					}
 				}
 			}
-		} catch (e) {
+		} catch (_e) {
 			// Fallback: no category mods in quick list
 		}
 	}
@@ -448,7 +448,7 @@ async function assignToUser(tid, assigneeUid, callerUid) {
 	// Set topic following status to watching for the assigned user
 	try {
 		await topics.follow(tid, parsedUid);
-	} catch (err) {
+	} catch (_err) {
 		// Non-fatal: assignment already saved
 	}
 
