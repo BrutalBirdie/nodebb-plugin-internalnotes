@@ -1,6 +1,6 @@
 # NodeBB Plugin Standards Audit
 
-This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream documentation](https://docs.nodebb.org/development/) and the [nodebb-plugin-quickstart](https://github.com/NodeBB/nodebb-plugin-quickstart) template. References: [development](https://docs.nodebb.org/development/), [quickstart](https://docs.nodebb.org/development/quickstart/), [plugins](https://docs.nodebb.org/development/plugins/), [plugin.json](https://docs.nodebb.org/development/plugins/plugin.json/), [hooks](https://docs.nodebb.org/development/plugins/hooks/), [statics](https://docs.nodebb.org/development/plugins/statics/), [libraries](https://docs.nodebb.org/development/plugins/libraries/), [i18n](https://docs.nodebb.org/development/i18n/), [style guide](https://docs.nodebb.org/development/style-guide/).
+This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream documentation](https://docs.nodebb.org/development/) and the [nodebb-plugin-quickstart](https://github.com/NodeBB/nodebb-plugin-quickstart) template. References: [development](https://docs.nodebb.org/development/), [quickstart](https://docs.nodebb.org/development/quickstart/), [plugins](https://docs.nodebb.org/development/plugins/), [plugin.json](https://docs.nodebb.org/development/plugins/plugin.json/), [hooks](https://docs.nodebb.org/development/plugins/hooks/), [statics](https://docs.nodebb.org/development/plugins/statics/), [libraries](https://docs.nodebb.org/development/plugins/libraries/), [i18n](https://docs.nodebb.org/development/i18n/), [style guide](https://docs.nodebb.org/development/style-guide/), [widgets](https://docs.nodebb.org/development/widgets/).
 
 ---
 
@@ -102,6 +102,8 @@ This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream do
 | **static:api.routes** | REST API routes (notes, assign, group search) | ✅ |
 | **filter:admin.header.build** | ACP nav item | ✅ |
 | **filter:navigation.available** | “Assigned” nav item | ✅ |
+| **filter:widgets.getWidgets** | Register "Internal Notes & Assign Topic" widget | ✅ |
+| **filter:widget.render:internalnotes_sidebar** | Render widget HTML (topic page, privileged only) | ✅ |
 | **filter:topic.get** | Add notes/assignee to single topic | ✅ |
 | **filter:topics.get** | Add notes/assignee to topic lists | ✅ |
 | **filter:topic.thread_tools** | Thread tools entries | ✅ |
@@ -111,7 +113,28 @@ This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream do
 
 ---
 
-## 8. Static directories & security
+## 8. Widgets ([docs](https://docs.nodebb.org/development/widgets/))
+
+The plugin provides an optional **Internal Notes & Assign Topic** widget for themes that use a different layout (e.g. when the right sidebar component is not present). Audited against the [Writing Widgets](https://docs.nodebb.org/development/widgets/) documentation.
+
+| Requirement | Status | Notes |
+|-------------|--------|--------|
+| **Register widget** | ✅ | Listens to `filter:widgets.getWidgets` with method `defineWidgets`; pushes `{ widget, name, description, content }` into the array and returns it |
+| **Widget namespace** | ✅ | `widget: 'internalnotes_sidebar'` – unique namespace for the render hook |
+| **Render hook** | ✅ | Listens to `filter:widget.render:internalnotes_sidebar` with method `renderInternalNotesWidget`; hook name matches widget namespace |
+| **widget.html** | ✅ | Render method assigns HTML to `widget.html` (buttons for Notes and Assign Topic) |
+| **Async return** | ✅ | `renderInternalNotesWidget` is async and returns `widget` (documented pattern: callback or return widget) |
+| **widget.req** | ✅ | Used for `widget.req.uid` and `widget.req.path` (topic-page and privilege checks) |
+| **widget.area** | ✅ | Used for `widget.area.template` and `widget.area.url` when present (topic-page detection) |
+| **widget.data** | ⚪ | Not used; `content: ''` in registration (no admin form) – valid for a widget with no options |
+| **Nomenclature** | ✅ | Plugin is `nodebb-plugin-internalnotes` (main purpose is internal notes); widget-only packages would use `nodebb-widget-xyz` – correct here |
+| **Privilege / scope** | ✅ | Widget renders empty HTML for non–topic pages and for users without `canViewNotes`; no sensitive data exposed |
+
+**Verdict:** Compliant with the widget development docs. Widget is optional fallback; primary UI is thread tools and right-sidebar placement.
+
+---
+
+## 9. Static directories & security
 
 - No `staticDirs` – no public static assets. Sensitive data is not exposed via static routes.
 - API routes use `middleware.ensureLoggedIn` and custom `ensurePrivileged` (notes visibility).  
@@ -119,7 +142,7 @@ This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream do
 
 ---
 
-## 9. Database
+## 10. Database
 
 - Uses NodeBB `database` API (`getObject`, `setObject`, `sortedSetAdd`, etc.).
 - Keys documented in README; no custom migrations yet (no `upgrades` in plugin.json).  
@@ -127,11 +150,11 @@ This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream do
 
 ---
 
-## 10. Style guide
+## 11. Style guide
 
 - Core follows Airbnb JS + ESLint; third-party plugins are encouraged but not required to follow.
-- This plugin has `"lint": "eslint ."` in package.json but no local eslint config in the repo; lint may rely on global or NodeBB env.  
-**Verdict:** Optional; adding an `eslint.config.mjs` (or similar) would align with best practice.
+- This plugin has `"lint": "eslint ."` in package.json and a minimal `eslint.config.mjs`; run `npm install -D eslint` for local lint.  
+**Verdict:** Compliant.
 
 ---
 
@@ -146,6 +169,7 @@ This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream do
 | Templates | ✅ Compliant |
 | i18n | ✅ Compliant |
 | Hooks | ✅ Compliant |
+| Widgets | ✅ Compliant ([widgets](https://docs.nodebb.org/development/widgets/)) |
 | Security | ✅ Compliant |
 | Database | ✅ Compliant |
 | Style / lint | ✅ eslint.config.mjs added (optional; run `npm install -D eslint` for lint) |
