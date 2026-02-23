@@ -2,7 +2,7 @@
 
 A NodeBB plugin that adds **internal staff notes** and **topic assignment** to forum topics. By default only administrators can see and manage notes and assignments; you can optionally allow global moderators and/or category moderators in the plugin settings. They are completely invisible to everyone else.
 
-**Version:** 1.0.0 · **NodeBB:** 4.x (tested on 4.8.1)
+**Version:** 1.0.1 · **NodeBB:** 4.x (tested on 4.8.1)
 
 ## Features
 
@@ -52,6 +52,8 @@ Navigate to **ACP > Plugins > Internal Notes & Assignments** to configure:
 ## Compatibility
 
 NodeBB v4.x. Tested on NodeBB 4.8.1.
+
+The right-sidebar button placement (injection into `component="sidebar/right"`) is only tested with the default theme **nodebb-theme-harmony** [v2.1.36](https://github.com/NodeBB/nodebb-theme-harmony/tree/v2.1.36). Other themes may need the **Internal Notes & Assign Topic** widget in ACP > Appearance > Widgets.
 
 ## For developers
 
