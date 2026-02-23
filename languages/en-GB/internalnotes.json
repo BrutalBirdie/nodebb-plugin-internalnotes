@@ -30,5 +30,6 @@
     "select-target-first": "Please select a user or group first.",
     "cancel": "Cancel",
     "notif-assigned-user": "You have been assigned to the topic: %1",
-    "notif-assigned-group": "Your group %2 has been assigned to the topic: %1"
+    "notif-assigned-group": "Your group %2 has been assigned to the topic: %1",
+    "notif-internal-note": "An internal note was added to a topic you're watching: %1"
 }

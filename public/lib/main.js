@@ -278,6 +278,7 @@
 						</a>
 					</li>
 				</ul>
+				<div id="assign-quick-select" class="assign-quick-select mb-3" title=""></div>
 				<div id="pane-user" class="assign-tab-pane">
 					<div class="mb-3 position-relative">
 						<input type="text" class="form-control" id="assign-user-input" placeholder="${escapeHtml(searchUserPlaceholder)}" autocomplete="off" />
@@ -352,6 +353,54 @@
 					if (box) {
 						box.classList.remove('d-none');
 					}
+				}
+
+				// Quick-select: assignable users (avatars)
+				const quickSelectEl = modalEl.querySelector('#assign-quick-select');
+				if (quickSelectEl) {
+					api.get('/plugins/internalnotes/assignable-users', {})
+						.then((payload) => {
+							const users = (payload && payload.users) ? payload.users : [];
+							if (users.length === 0) {
+								quickSelectEl.style.display = 'none';
+								return;
+							}
+							quickSelectEl.style.display = 'flex';
+							const safeAttr = (str) => (str == null ? '' : String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'));
+							quickSelectEl.innerHTML = users.map((u) => {
+								const picture = (u.picture && u.picture.length) ? escapeHtml(u.picture) : '';
+								const name = u.username || '';
+								const uid = parseInt(u.uid, 10);
+								const titleAttr = safeAttr(name);
+								if (picture) {
+									return `<button type="button" class="assign-quick-select-avatar btn btn-link p-0 me-1" data-uid="${uid}" data-username="${titleAttr}" title="${titleAttr}"><img src="${picture}" alt="" class="rounded" /></button>`;
+								}
+								return `<button type="button" class="assign-quick-select-avatar btn btn-link p-0 me-1" data-uid="${uid}" data-username="${titleAttr}" title="${titleAttr}"><span class="assign-quick-select-fallback rounded"><i class="fa fa-user"></i></span></button>`;
+							}).join('');
+							quickSelectEl.querySelectorAll('.assign-quick-select-avatar').forEach((btn) => {
+								btn.addEventListener('click', () => {
+									const uid = btn.getAttribute('data-uid');
+									const username = btn.getAttribute('data-username'); // browser decodes HTML entities
+									if (uid && username !== null) {
+										setSelection('user', uid, username);
+										// Switch to User tab
+										modalEl.querySelectorAll('.assign-tab-link').forEach(l => l.classList.remove('active'));
+										const userTab = modalEl.querySelector('.assign-tab-link[data-pane="pane-user"]');
+										if (userTab) {
+											userTab.classList.add('active');
+										}
+										modalEl.querySelectorAll('.assign-tab-pane').forEach(p => { p.style.display = 'none'; });
+										const paneUser = modalEl.querySelector('#pane-user');
+										if (paneUser) {
+											paneUser.style.display = '';
+										}
+									}
+								});
+							});
+						})
+						.catch(() => {
+							quickSelectEl.style.display = 'none';
+						});
 				}
 
 				// "Assign to myself"
@@ -556,8 +605,11 @@
 				</button>
 			</div>
 		`;
-		// Append so we're last in DOM; with margin-top: auto we sit at bottom. If theme uses column-reverse, insert first so we render at bottom.
-		if (window.getComputedStyle(sidebarRight).flexDirection === 'column-reverse') {
+		// Insert right after <ul id="logged-in-menu"> when present; otherwise append at end of sidebar
+		const loggedInMenu = document.querySelector('#logged-in-menu');
+		if (loggedInMenu) {
+			loggedInMenu.after(wrap);
+		} else if (window.getComputedStyle(sidebarRight).flexDirection === 'column-reverse') {
 			sidebarRight.insertBefore(wrap, sidebarRight.firstChild);
 		} else {
 			sidebarRight.appendChild(wrap);

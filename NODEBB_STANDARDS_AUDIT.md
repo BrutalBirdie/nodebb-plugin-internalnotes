@@ -9,7 +9,7 @@ This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream do
 | Requirement | Status | Notes |
 |-------------|--------|--------|
 | **id** | ✅ | `nodebb-plugin-internalnotes` (unique, matches npm package name) |
-| **url** | ✅ | Absolute URL to repo |
+| **url** | ✅ | Absolute URL to repo (https://github.com/BrutalBirdie/nodebb-plugin-internalnotes) |
 | **library** | ✅ | `./library.js` – entry point loaded when plugin is active |
 | **hooks** | ✅ | All hooks have `hook` and `method`; optional `priority` omitted (default 10) |
 | **scss** | ✅ | `scss/internalnotes.scss` |
@@ -31,10 +31,12 @@ This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream do
 |-------------|--------|--------|
 | **name** | ✅ | `nodebb-plugin-internalnotes` (must be prefixed `nodebb-plugin-` for npm and NodeBB) |
 | **main** | ✅ | `library.js` |
-| **nbbpm.compatibility** | ✅ | `^3.0.0` – required for nbbpm listing and installs |
-| **repository / bugs** | ✅ | Present |
+| **nbbpm.compatibility** | ✅ | `^4.0.0` – required for nbbpm listing; targets NodeBB v4 |
+| **repository / bugs** | ✅ | Present (BrutalBirdie repo) |
 | **keywords** | ✅ | Include `nodebb`, `plugin` |
-| **.npmignore** | ✅ | Added (node_modules, .git, .DS_Store, etc.) so only publishable files are shipped |
+| **author** | ✅ | Present |
+| **devDependencies** | ✅ | `eslint` for `npm run lint` |
+| **.npmignore** | ✅ | Present (node_modules, .git, .DS_Store, etc.) so only publishable files are shipped |
 
 **Verdict:** Compliant.
 
@@ -106,7 +108,6 @@ This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream do
 | **filter:widget.render:internalnotes_sidebar** | Render widget HTML (topic page, privileged only) | ✅ |
 | **filter:topic.get** | Add notes/assignee to single topic | ✅ |
 | **filter:topics.get** | Add notes/assignee to topic lists | ✅ |
-| **filter:topic.thread_tools** | Thread tools entries | ✅ |
 | **action:topic.purge** | Clean up notes/assignee on topic purge | ✅ |
 
 **Verdict:** All hooks used correctly; filters return data in the expected shape.
@@ -130,7 +131,7 @@ The plugin provides an optional **Internal Notes & Assign Topic** widget for the
 | **Nomenclature** | ✅ | Plugin is `nodebb-plugin-internalnotes` (main purpose is internal notes); widget-only packages would use `nodebb-widget-xyz` – correct here |
 | **Privilege / scope** | ✅ | Widget renders empty HTML for non–topic pages and for users without `canViewNotes`; no sensitive data exposed |
 
-**Verdict:** Compliant with the widget development docs. Widget is optional fallback; primary UI is thread tools and right-sidebar placement.
+**Verdict:** Compliant with the widget development docs. Primary UI for Internal Notes and Assign Topic is the widget (and any theme-specific sidebar placement); no `filter:topic.thread_tools` in current plugin.
 
 ---
 
@@ -153,7 +154,7 @@ The plugin provides an optional **Internal Notes & Assign Topic** widget for the
 ## 11. Style guide
 
 - Core follows Airbnb JS + ESLint; third-party plugins are encouraged but not required to follow.
-- This plugin has `"lint": "eslint ."` in package.json and a minimal `eslint.config.mjs`; run `npm install -D eslint` for local lint.  
+- This plugin has `"lint": "eslint ."` in package.json, `eslint` in devDependencies, and `eslint.config.mjs`; `npm run lint` passes with no errors or warnings.  
 **Verdict:** Compliant.
 
 ---
@@ -174,4 +175,4 @@ The plugin provides an optional **Internal Notes & Assign Topic** widget for the
 | Database | ✅ Compliant |
 | Style / lint | ✅ eslint.config.mjs added (optional; run `npm install -D eslint` for lint) |
 
-**Done:** `.npmignore` and a minimal `eslint.config.mjs` were added. For production, confirm in your NodeBB 3 instance that API requests from the client (e.g. `api.get('/plugins/internalnotes/' + tid)`) hit the routes your plugin registers; adjust server route prefix if your NodeBB mounts plugin routes differently.
+**Done:** Plugin targets NodeBB v4 (`nbbpm.compatibility`: `^4.0.0`). `.npmignore` and `eslint.config.mjs` are in place; `npm run lint` passes. For production, confirm in your NodeBB instance that API requests from the client hit the routes your plugin registers; adjust server route prefix if your NodeBB mounts plugin routes differently.
