@@ -20,16 +20,20 @@
             "method": "addNavigation"
         },
         {
+            "hook": "filter:widgets.getWidgets",
+            "method": "defineWidgets"
+        },
+        {
+            "hook": "filter:widget.render:internalnotes_sidebar",
+            "method": "renderInternalNotesWidget"
+        },
+        {
             "hook": "filter:topic.get",
             "method": "addInternalNotesToTopic"
         },
         {
             "hook": "filter:topics.get",
             "method": "addInternalNotesToTopics"
-        },
-        {
-            "hook": "filter:topic.thread_tools",
-            "method": "addThreadTools"
         },
         {
             "hook": "action:topic.purge",

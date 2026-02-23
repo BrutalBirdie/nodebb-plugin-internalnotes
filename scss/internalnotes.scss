@@ -112,7 +112,88 @@
 		min-height: 60px;
 		font-size: 0.9rem;
 	}
+
+	.internal-notes-form-actions {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+	}
 }
+
+// Internal Notes & Assign Topic in component="sidebar/right" — match theme (grey icons, at bottom)
+[component="sidebar/right"] .internal-notes-sidebar-actions {
+	margin-top: auto; /* push to bottom when parent is flex column */
+}
+.internal-notes-sidebar-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	padding: 0;
+	min-width: 0;
+
+	.internal-notes-sidebar-item {
+		display: flex;
+		flex-direction: column;
+		gap: 0;
+	}
+
+	.internal-notes-sidebar-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		border: none;
+		background: transparent;
+		color: inherit;
+		font-size: inherit;
+		text-align: left;
+		cursor: pointer;
+		border-radius: 0;
+		transition: background-color 0.15s ease;
+
+		&:hover {
+			background: var(--bs-tertiary-bg, rgba(0, 0, 0, 0.04));
+		}
+
+		&:focus {
+			outline: none;
+			box-shadow: inset 0 0 0 2px var(--bs-primary, #0d6efd);
+		}
+
+		// Match theme: same grey as other sidebar icons (no custom colors)
+		i {
+			flex-shrink: 0;
+			width: 1em;
+			text-align: center;
+			color: inherit;
+			opacity: inherit;
+		}
+	}
+
+	.internal-notes-sidebar-btn-text {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	// Collapsed (no "open" on sidebar): icon-only — hide text
+	&.internal-notes-sidebar-actions--collapsed .internal-notes-sidebar-btn-text {
+		display: none !important;
+		visibility: hidden !important;
+		width: 0 !important;
+		height: 0 !important;
+		overflow: hidden !important;
+		position: absolute !important;
+		clip: rect(0, 0, 0, 0) !important;
+	}
+	&.internal-notes-sidebar-actions--collapsed .internal-notes-sidebar-btn {
+		justify-content: center;
+		padding: 0.5rem 0.75rem;
+		min-height: 2.5rem;
+	}
+}
+
 
 .internal-notes-badge,
 .assignee-badge {

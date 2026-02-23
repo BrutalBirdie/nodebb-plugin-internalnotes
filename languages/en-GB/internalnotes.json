@@ -3,6 +3,7 @@
     "panel-title": "Internal Notes",
     "placeholder": "Write an internal note…",
     "add-note": "Add Note",
+    "close": "Close",
     "delete-note": "Delete",
     "no-notes": "No internal notes yet.",
     "error-loading": "Could not load notes.",

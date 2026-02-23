@@ -111,6 +111,7 @@ plugin.addInternalNotesToTopic = async (data) => {
 	}
 	const allowed = await canViewNotes(data.uid);
 	data.topic.canViewInternalNotes = allowed;
+	data.canViewInternalNotes = allowed; // so client can read from ajaxify.data.canViewInternalNotes
 	if (allowed) {
 		data.topic.assignee = await getAssignee(data.topic.tid);
 		data.topic.internalNoteCount = await db.sortedSetCard(`internalnotes:tid:${data.topic.tid}`);
@@ -137,23 +138,6 @@ plugin.addInternalNotesToTopics = async (data) => {
 	return data;
 };
 
-plugin.addThreadTools = async (data) => {
-	const allowed = await canViewNotes(data.uid);
-	if (allowed) {
-		data.tools.push({
-			title: '[[internalnotes:thread-tool-notes]]',
-			class: 'toggle-internal-notes',
-			icon: 'fa-sticky-note',
-		});
-		data.tools.push({
-			title: '[[internalnotes:thread-tool-assign]]',
-			class: 'assign-topic-user',
-			icon: 'fa-user-plus',
-		});
-	}
-	return data;
-};
-
 plugin.purgeTopicNotes = async ({ topic }) => {
 	if (!topic || !topic.tid) {
 		return;
@@ -176,6 +160,61 @@ plugin.addNavigation = (menu) => {
 		text: '[[internalnotes:menu.assigned]]',
 	}]);
 	return menu;
+};
+
+// --- Widget: Internal Notes & Assign Topic in sidebar (topic page only) ---
+
+plugin.defineWidgets = (widgets) => {
+	widgets.push({
+		widget: 'internalnotes_sidebar',
+		name: 'Internal Notes & Assign Topic',
+		description: 'Shows Internal Notes and Assign Topic buttons for privileged users on topic pages. Add this widget to the Global Sidebar (the right sidebar with notifications, search, drafts, chat).',
+		content: '', // no admin config
+	});
+	return widgets;
+};
+
+plugin.renderInternalNotesWidget = async (widget) => {
+	// Show only on topic pages. Widget can be in:
+	// - Topic template sidebar (template === 'topic'), or
+	// - Global Sidebar (template === 'global') — same right sidebar as notifications/search/drafts/chat
+	const templateName = (widget.templateData && widget.templateData.template && widget.templateData.template.name) ||
+		(widget.area && widget.area.template) || '';
+	const path = (widget.req && widget.req.path) ? widget.req.path : (widget.area && widget.area.url) || '';
+	const isTopicPage = String(templateName) === 'topic' ||
+		(String(templateName) === 'global' && /^\/topic\//.test(String(path)));
+	if (!isTopicPage) {
+		widget.html = '';
+		return widget;
+	}
+	const uid = widget.req && widget.req.uid ? widget.req.uid : 0;
+	const allowed = await canViewNotes(uid);
+	if (!allowed) {
+		widget.html = '';
+		return widget;
+	}
+	const translator = require.main.require('./src/translator');
+	const [notesLabel, assignLabel] = await Promise.all([
+		new Promise((resolve) => translator.translate('[[internalnotes:thread-tool-notes]]', resolve)),
+		new Promise((resolve) => translator.translate('[[internalnotes:thread-tool-assign]]', resolve)),
+	]);
+	const escapeHtml = (str) => {
+		if (str == null) return '';
+		const s = String(str);
+		return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+	};
+	widget.html = `
+<div class="internal-notes-sidebar-actions mb-3">
+	<div class="btn-group-vertical w-100 d-flex flex-column gap-2" role="group">
+		<button type="button" class="btn btn-sm btn-outline-warning toggle-internal-notes w-100 text-start">
+			<i class="fa fa-sticky-note me-1"></i> ${escapeHtml(notesLabel)}
+		</button>
+		<button type="button" class="btn btn-sm btn-outline-primary assign-topic-user w-100 text-start">
+			<i class="fa fa-user-plus me-1"></i> ${escapeHtml(assignLabel)}
+		</button>
+	</div>
+</div>`;
+	return widget;
 };
 
 plugin.renderAssignedPage = async (req, res) => {

@@ -19,10 +19,11 @@
 			notesPanel.remove();
 		}
 
-		const [panelTitle, placeholder, addNote] = await Promise.all([
+		const [panelTitle, placeholder, addNote, closeLabel] = await Promise.all([
 			t('panel-title'),
 			t('placeholder'),
 			t('add-note'),
+			t('close'),
 		]);
 
 		const panel = document.createElement('div');
@@ -31,13 +32,15 @@
 		panel.innerHTML = `
 			<div class="internal-notes-header">
 				<h5><i class="fa fa-sticky-note"></i> ${escapeHtml(panelTitle)}</h5>
-				<button class="btn btn-sm btn-link internal-notes-close" title="Close"><i class="fa fa-times"></i></button>
 			</div>
 			<div class="internal-notes-assignee"></div>
 			<div class="internal-notes-list"></div>
 			<div class="internal-notes-form">
 				<textarea class="form-control internal-notes-input" rows="3" placeholder="${escapeHtml(placeholder)}"></textarea>
-				<button class="btn btn-primary btn-sm internal-notes-submit mt-2">${escapeHtml(addNote)}</button>
+				<div class="internal-notes-form-actions mt-2">
+					<button type="button" class="btn btn-primary btn-sm internal-notes-submit">${escapeHtml(addNote)}</button>
+					<button type="button" class="btn btn-secondary btn-sm internal-notes-close">${escapeHtml(closeLabel)}</button>
+				</div>
 			</div>
 		`;
 		document.body.appendChild(panel);
@@ -494,6 +497,83 @@
 		await loadAssignee(tid);
 	}
 
+	// --- Helpers for badge visibility (topic/list pages) ---
+
+	function canViewInternalNotesOnPage() {
+		return !!(ajaxify.data && (
+			ajaxify.data.canViewInternalNotes === true ||
+			(ajaxify.data.topic && ajaxify.data.topic.canViewInternalNotes === true)
+		));
+	}
+
+	// --- Buttons in component="sidebar/right" (collapsed = no "open" class = icon only; expanded = "open" = icon + text) ---
+
+	function isSidebarRightCollapsed(sidebarRight) {
+		if (!sidebarRight) return true;
+		// Expanded when this element or any ancestor has class "open"
+		const hasOpen = sidebarRight.classList.contains('open') ||
+			(sidebarRight.parentElement && sidebarRight.parentElement.classList.contains('open'));
+		return !hasOpen;
+	}
+
+	function updateSidebarRightCollapsedState(wrap) {
+		const sidebarRight = document.querySelector('[component="sidebar/right"]');
+		if (!sidebarRight || !wrap) return;
+		const collapsed = isSidebarRightCollapsed(sidebarRight);
+		wrap.classList.toggle('internal-notes-sidebar-actions--collapsed', collapsed);
+	}
+
+	async function renderSidebarRightButtons() {
+		const tid = getTid();
+		if (!tid || !canViewInternalNotesOnPage()) {
+			return;
+		}
+		const sidebarRight = document.querySelector('[component="sidebar/right"]');
+		if (!sidebarRight) {
+			return;
+		}
+		const existing = sidebarRight.querySelector('.internal-notes-sidebar-actions');
+		if (existing) {
+			if (existing._internalNotesResizeObserver) existing._internalNotesResizeObserver.disconnect();
+			if (existing._internalNotesMutationObserver) existing._internalNotesMutationObserver.disconnect();
+			existing.remove();
+		}
+		const [notesLabel, assignLabel] = await Promise.all([
+			t('thread-tool-notes'),
+			t('thread-tool-assign'),
+		]);
+		const wrap = document.createElement('div');
+		wrap.className = 'internal-notes-sidebar-actions';
+		wrap.innerHTML = `
+			<div class="internal-notes-sidebar-item" role="group">
+				<button type="button" class="toggle-internal-notes internal-notes-sidebar-btn" title="${escapeHtml(notesLabel)}">
+					<i class="fa fa-sticky-note" aria-hidden="true"></i>
+					<span class="internal-notes-sidebar-btn-text">${escapeHtml(notesLabel)}</span>
+				</button>
+				<button type="button" class="assign-topic-user internal-notes-sidebar-btn" title="${escapeHtml(assignLabel)}">
+					<i class="fa fa-user-plus" aria-hidden="true"></i>
+					<span class="internal-notes-sidebar-btn-text">${escapeHtml(assignLabel)}</span>
+				</button>
+			</div>
+		`;
+		// Append so we're last in DOM; with margin-top: auto we sit at bottom. If theme uses column-reverse, insert first so we render at bottom.
+		if (window.getComputedStyle(sidebarRight).flexDirection === 'column-reverse') {
+			sidebarRight.insertBefore(wrap, sidebarRight.firstChild);
+		} else {
+			sidebarRight.appendChild(wrap);
+		}
+
+		updateSidebarRightCollapsedState(wrap);
+		requestAnimationFrame(() => updateSidebarRightCollapsedState(wrap));
+		const ro = new ResizeObserver(() => updateSidebarRightCollapsedState(wrap));
+		ro.observe(sidebarRight);
+		wrap._internalNotesResizeObserver = ro;
+		const mo = new MutationObserver(() => updateSidebarRightCollapsedState(wrap));
+		mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+		mo.observe(sidebarRight, { attributes: true, attributeFilter: ['class'] });
+		wrap._internalNotesMutationObserver = mo;
+	}
+
 	// --- Page lifecycle ---
 
 	hooks.on('action:ajaxify.end', () => {
@@ -503,6 +583,8 @@
 		}
 		// Run for both single-topic page and topic list pages (category, recent, etc.)
 		renderBadges();
+		// Topic page: inject Internal Notes & Assign Topic into the far-right sidebar (component="sidebar/right")
+		renderSidebarRightButtons();
 	});
 
 	function getTopicDataForTid(tid) {
@@ -538,7 +620,7 @@
 
 	async function renderBadges() {
 		const headers = document.querySelectorAll('[component="topic/header"]');
-		const isTopicPage = ajaxify.data.tid && ajaxify.data.canViewInternalNotes;
+		const isTopicPage = ajaxify.data.tid && canViewInternalNotesOnPage();
 		// If no headers found but we're on the topic page, use a single "virtual" pass with #content .topic-title
 		const headerList = headers.length ? Array.from(headers) : (isTopicPage ? [document.body] : []);
 
