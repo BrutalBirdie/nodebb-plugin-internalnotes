@@ -6,6 +6,7 @@ node_modules/
 .gitignore
 .DS_Store
 Thumbs.db
+.github/
 
 # IDE and local config
 *.log

@@ -16,6 +16,10 @@ A NodeBB plugin that adds **internal staff notes** and **topic assignment** to f
 - **Right sidebar placement** — On topic pages, "Internal Notes" and "Assign Topic" buttons are shown in the far-right sidebar (`component="sidebar/right"`). A widget is also available for themes that use a different layout.
 - **Admin settings page** — Configure who can access notes: allow global moderators and/or category moderators (ACP > Plugins > Internal Notes & Assignments).
 
+## Demo - Version 1.0.2
+
+![View Demo](.github/demo-data/nodebb-plugin-internalnotes-102-demo.webp)
+
 ## Installation
 
 ```bash
