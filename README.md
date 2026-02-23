@@ -22,16 +22,7 @@ npm install nodebb-plugin-internalnotes
 
 Then activate the plugin from the **Admin Control Panel > Extend > Plugins**.
 
-**Where the buttons appear:** On topic pages, the **Internal Notes** and **Assign Topic** buttons are automatically placed in the far-right sidebar (`component="sidebar/right"` — the thin vertical bar on the right edge of the page). No widget setup is required. If your theme does not have this component, you can add the **Internal Notes & Assign Topic** widget to the Global Sidebar in **ACP > Appearance > Widgets** as a fallback.
-
-### For development
-
-```bash
-cd /path/to/nodebb
-npm link /path/to/nodebb-plugin-internalnotes
-./nodebb build
-./nodebb dev
-```
+**Where the buttons appear:** On topic pages, the **Internal Notes** and **Assign Topic** buttons are automatically placed in the far-right sidebar (the thin vertical bar on the right edge of the page). No widget setup is required. If your theme does not have this component, you can add the **Internal Notes & Assign Topic** widget to the Global Sidebar in **ACP > Appearance > Widgets** as a fallback.
 
 ## Configuration
 
@@ -58,47 +49,14 @@ Navigate to **ACP > Plugins > Internal Notes & Assignments** to configure:
 - **User tab** — search and select any user by username
 - **Group tab** — search and select any group by name
 
-## Database Keys
-
-| Key | Type | Description |
-|-----|------|-------------|
-| `internalnote:<noteId>` | Hash | Individual note (noteId, tid, uid, content, timestamp) |
-| `internalnotes:tid:<tid>` | Sorted Set | Note IDs for a topic (score = timestamp) |
-| `topic:<tid>` → `assignee` | Object Field | UID (for user) or group name (for group) |
-| `topic:<tid>` → `assigneeType` | Object Field | `"user"` or `"group"` |
-| `global` → `nextInternalNoteId` | Object Field | Auto-incrementing note ID counter |
-
-## API Endpoints
-
-All endpoints require authentication and privileged access.
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v3/plugins/internalnotes/:tid` | Get all notes for a topic |
-| `POST` | `/api/v3/plugins/internalnotes/:tid` | Create a note (`{ content }`) |
-| `DELETE` | `/api/v3/plugins/internalnotes/:tid/:noteId` | Delete a note |
-| `GET` | `/api/v3/plugins/internalnotes/:tid/assign` | Get topic assignee |
-| `PUT` | `/api/v3/plugins/internalnotes/:tid/assign` | Assign topic (`{ type: "user"\|"group", id: uid\|groupName }`) |
-| `DELETE` | `/api/v3/plugins/internalnotes/:tid/assign` | Unassign topic |
-| `GET` | `/api/v3/plugins/internalnotes/groups/search?query=...` | Search groups by name |
-
 ## Compatibility
 
-NodeBB v4.x (`nbbpm.compatibility`: `^4.0.0`). Tested on NodeBB 4.8.1.
+NodeBB v4.x. Tested on NodeBB 4.8.1.
 
-## Development
+## For developers
 
-- The plugin follows [NodeBB plugin standards](https://docs.nodebb.org/development/plugins/); see [NODEBB_STANDARDS_AUDIT.md](NODEBB_STANDARDS_AUDIT.md) for a full audit.
-- Lint: `npm run lint` (ESLint).
-
-## Publishing to npm
-
-A GitHub Action (`.github/workflows/publish-npm.yml`) runs lint and publishes to [npm](https://www.npmjs.com/~brutalbirdie) when:
-
-- A **release** is published on GitHub, or
-- The workflow is run manually (**Actions → Lint and publish to npm → Run workflow**).
-
-**One-time setup:** In this repo, go to **Settings → Secrets and variables → Actions** and add a secret named `NPM_TOKEN` with an [npm access token](https://www.npmjs.com/settings/brutalbirdie/tokens) (Automation type is recommended). The workflow will only publish if `npm run lint` passes.
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** — Local setup, linting, and publishing to npm.
+- **[TECHNICAL.md](TECHNICAL.md)** — Database keys and API endpoints.
 
 ## License
 
