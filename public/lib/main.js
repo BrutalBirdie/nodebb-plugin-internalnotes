@@ -19,10 +19,11 @@
 			notesPanel.remove();
 		}
 
-		const [panelTitle, placeholder, addNote] = await Promise.all([
+		const [panelTitle, placeholder, addNote, closeLabel] = await Promise.all([
 			t('panel-title'),
 			t('placeholder'),
 			t('add-note'),
+			t('close'),
 		]);
 
 		const panel = document.createElement('div');
@@ -31,13 +32,15 @@
 		panel.innerHTML = `
 			<div class="internal-notes-header">
 				<h5><i class="fa fa-sticky-note"></i> ${escapeHtml(panelTitle)}</h5>
-				<button class="btn btn-sm btn-link internal-notes-close" title="Close"><i class="fa fa-times"></i></button>
 			</div>
 			<div class="internal-notes-assignee"></div>
 			<div class="internal-notes-list"></div>
 			<div class="internal-notes-form">
 				<textarea class="form-control internal-notes-input" rows="3" placeholder="${escapeHtml(placeholder)}"></textarea>
-				<button class="btn btn-primary btn-sm internal-notes-submit mt-2">${escapeHtml(addNote)}</button>
+				<div class="internal-notes-form-actions mt-2">
+					<button type="button" class="btn btn-primary btn-sm internal-notes-submit">${escapeHtml(addNote)}</button>
+					<button type="button" class="btn btn-secondary btn-sm internal-notes-close">${escapeHtml(closeLabel)}</button>
+				</div>
 			</div>
 		`;
 		document.body.appendChild(panel);
