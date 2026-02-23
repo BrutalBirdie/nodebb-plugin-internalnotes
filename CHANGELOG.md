@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.2] - 2025-02-23
+
+### Added
+
+- **Quick-select assignable users** — In the Assign Topic modal, a row of avatars for assignable users (admins and, per settings, global/category moderators) for one-click assignment.
+- **Notification on new internal note** — Users who can view internal notes and are watching the topic receive a notification when a note is added (excluding the note author).
+- **Auto-follow on assignment** — When a topic is assigned to a user or group, the assigned user(s) are set to "watching" the topic so they get follow notifications.
+
+### Changed
+
+- **Sidebar button position** — Internal Notes and Assign Topic buttons are now injected right after the logged-in menu (`#logged-in-menu`) in the right sidebar when present, instead of at the bottom.
+
 ## [1.0.1] - 2025-02-23
 
 ### Added
