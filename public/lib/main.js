@@ -605,8 +605,11 @@
 				</button>
 			</div>
 		`;
-		// Append so we're last in DOM; with margin-top: auto we sit at bottom. If theme uses column-reverse, insert first so we render at bottom.
-		if (window.getComputedStyle(sidebarRight).flexDirection === 'column-reverse') {
+		// Insert right after <ul id="logged-in-menu"> when present; otherwise append at end of sidebar
+		const loggedInMenu = document.querySelector('#logged-in-menu');
+		if (loggedInMenu) {
+			loggedInMenu.after(wrap);
+		} else if (window.getComputedStyle(sidebarRight).flexDirection === 'column-reverse') {
 			sidebarRight.insertBefore(wrap, sidebarRight.firstChild);
 		} else {
 			sidebarRight.appendChild(wrap);

@@ -120,10 +120,7 @@
 	}
 }
 
-// Internal Notes & Assign Topic in component="sidebar/right" — match theme (grey icons, at bottom)
-[component="sidebar/right"] .internal-notes-sidebar-actions {
-	margin-top: auto; /* push to bottom when parent is flex column */
-}
+// Internal Notes & Assign Topic in component="sidebar/right" — inserted after #logged-in-menu
 .internal-notes-sidebar-actions {
 	display: flex;
 	flex-direction: column;
