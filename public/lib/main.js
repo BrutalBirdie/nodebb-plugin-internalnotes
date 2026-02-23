@@ -503,7 +503,22 @@
 		));
 	}
 
-	// --- Buttons in component="sidebar/right" (far-right nav, not the panel sidebar) ---
+	// --- Buttons in component="sidebar/right" (collapsed = no "open" class = icon only; expanded = "open" = icon + text) ---
+
+	function isSidebarRightCollapsed(sidebarRight) {
+		if (!sidebarRight) return true;
+		// Expanded when this element or any ancestor has class "open"
+		const hasOpen = sidebarRight.classList.contains('open') ||
+			(sidebarRight.parentElement && sidebarRight.parentElement.classList.contains('open'));
+		return !hasOpen;
+	}
+
+	function updateSidebarRightCollapsedState(wrap) {
+		const sidebarRight = document.querySelector('[component="sidebar/right"]');
+		if (!sidebarRight || !wrap) return;
+		const collapsed = isSidebarRightCollapsed(sidebarRight);
+		wrap.classList.toggle('internal-notes-sidebar-actions--collapsed', collapsed);
+	}
 
 	async function renderSidebarRightButtons() {
 		const tid = getTid();
@@ -516,6 +531,8 @@
 		}
 		const existing = sidebarRight.querySelector('.internal-notes-sidebar-actions');
 		if (existing) {
+			if (existing._internalNotesResizeObserver) existing._internalNotesResizeObserver.disconnect();
+			if (existing._internalNotesMutationObserver) existing._internalNotesMutationObserver.disconnect();
 			existing.remove();
 		}
 		const [notesLabel, assignLabel] = await Promise.all([
@@ -523,18 +540,35 @@
 			t('thread-tool-assign'),
 		]);
 		const wrap = document.createElement('div');
-		wrap.className = 'internal-notes-sidebar-actions p-2';
+		wrap.className = 'internal-notes-sidebar-actions';
 		wrap.innerHTML = `
-			<div class="btn-group-vertical w-100 d-flex flex-column gap-2" role="group">
-				<button type="button" class="btn btn-sm btn-outline-warning toggle-internal-notes w-100 text-start">
-					<i class="fa fa-sticky-note me-1"></i> ${escapeHtml(notesLabel)}
+			<div class="internal-notes-sidebar-item" role="group">
+				<button type="button" class="toggle-internal-notes internal-notes-sidebar-btn" title="${escapeHtml(notesLabel)}">
+					<i class="fa fa-sticky-note" aria-hidden="true"></i>
+					<span class="internal-notes-sidebar-btn-text">${escapeHtml(notesLabel)}</span>
 				</button>
-				<button type="button" class="btn btn-sm btn-outline-primary assign-topic-user w-100 text-start">
-					<i class="fa fa-user-plus me-1"></i> ${escapeHtml(assignLabel)}
+				<button type="button" class="assign-topic-user internal-notes-sidebar-btn" title="${escapeHtml(assignLabel)}">
+					<i class="fa fa-user-plus" aria-hidden="true"></i>
+					<span class="internal-notes-sidebar-btn-text">${escapeHtml(assignLabel)}</span>
 				</button>
 			</div>
 		`;
-		sidebarRight.insertBefore(wrap, sidebarRight.firstChild);
+		// Append so we're last in DOM; with margin-top: auto we sit at bottom. If theme uses column-reverse, insert first so we render at bottom.
+		if (window.getComputedStyle(sidebarRight).flexDirection === 'column-reverse') {
+			sidebarRight.insertBefore(wrap, sidebarRight.firstChild);
+		} else {
+			sidebarRight.appendChild(wrap);
+		}
+
+		updateSidebarRightCollapsedState(wrap);
+		requestAnimationFrame(() => updateSidebarRightCollapsedState(wrap));
+		const ro = new ResizeObserver(() => updateSidebarRightCollapsedState(wrap));
+		ro.observe(sidebarRight);
+		wrap._internalNotesResizeObserver = ro;
+		const mo = new MutationObserver(() => updateSidebarRightCollapsedState(wrap));
+		mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+		mo.observe(sidebarRight, { attributes: true, attributeFilter: ['class'] });
+		wrap._internalNotesMutationObserver = mo;
 	}
 
 	// --- Page lifecycle ---
