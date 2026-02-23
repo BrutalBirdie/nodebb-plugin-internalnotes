@@ -10,7 +10,7 @@ A NodeBB plugin that adds **internal staff notes** and **topic assignment** to f
 - **Topic Assignment (User or Group)** — Assign a topic to a specific user or an entire group. All members of an assigned group receive a notification.
 - **"Assign to myself"** — The first option in the assignment modal lets the current user instantly assign the topic to themselves.
 - **Permission-based visibility** — Notes, assignment badges, and the thread tool buttons are completely invisible to regular users. By default only admins can see them; you can enable global moderators and/or category moderators in the plugin settings. No DOM elements are rendered for unprivileged users.
-- **Thread Tools integration** — "Internal Notes" and "Assign Topic" options appear in the topic thread tools dropdown for privileged users only.
+- **Right sidebar placement** — On topic pages, "Internal Notes" and "Assign Topic" buttons are shown in the far-right sidebar (`component="sidebar/right"`). A widget is also available for themes that use a different layout.
 - **Admin settings page** — Configure who can access notes: allow global moderators and/or category moderators (ACP > Plugins > Internal Notes & Assignments).
 
 ## Installation
@@ -21,6 +21,8 @@ npm install nodebb-plugin-internalnotes
 ```
 
 Then activate the plugin from the **Admin Control Panel > Extend > Plugins**.
+
+**Where the buttons appear:** On topic pages, the **Internal Notes** and **Assign Topic** buttons are automatically placed in the far-right sidebar (`component="sidebar/right"` — the thin vertical bar on the right edge of the page). No widget setup is required. If your theme does not have this component, you can add the **Internal Notes & Assign Topic** widget to the Global Sidebar in **ACP > Appearance > Widgets** as a fallback.
 
 ### For development
 
@@ -41,8 +43,7 @@ Navigate to **ACP > Plugins > Internal Notes & Assignments** to configure:
 ## Usage
 
 1. Navigate to any topic as a user who has access (admin, or global/category moderator if enabled in settings).
-2. Open the **Thread Tools** dropdown (the wrench icon).
-3. Click **Internal Notes** to open the notes side panel, or **Assign Topic** to assign the topic.
+2. In the **far-right sidebar** (the vertical bar on the right edge of the page), click **Internal Notes** to open the notes side panel, or **Assign Topic** to assign the topic.
 
 ### Notes panel
 

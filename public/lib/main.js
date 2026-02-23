@@ -494,6 +494,49 @@
 		await loadAssignee(tid);
 	}
 
+	// --- Helpers for badge visibility (topic/list pages) ---
+
+	function canViewInternalNotesOnPage() {
+		return !!(ajaxify.data && (
+			ajaxify.data.canViewInternalNotes === true ||
+			(ajaxify.data.topic && ajaxify.data.topic.canViewInternalNotes === true)
+		));
+	}
+
+	// --- Buttons in component="sidebar/right" (far-right nav, not the panel sidebar) ---
+
+	async function renderSidebarRightButtons() {
+		const tid = getTid();
+		if (!tid || !canViewInternalNotesOnPage()) {
+			return;
+		}
+		const sidebarRight = document.querySelector('[component="sidebar/right"]');
+		if (!sidebarRight) {
+			return;
+		}
+		const existing = sidebarRight.querySelector('.internal-notes-sidebar-actions');
+		if (existing) {
+			existing.remove();
+		}
+		const [notesLabel, assignLabel] = await Promise.all([
+			t('thread-tool-notes'),
+			t('thread-tool-assign'),
+		]);
+		const wrap = document.createElement('div');
+		wrap.className = 'internal-notes-sidebar-actions p-2';
+		wrap.innerHTML = `
+			<div class="btn-group-vertical w-100 d-flex flex-column gap-2" role="group">
+				<button type="button" class="btn btn-sm btn-outline-warning toggle-internal-notes w-100 text-start">
+					<i class="fa fa-sticky-note me-1"></i> ${escapeHtml(notesLabel)}
+				</button>
+				<button type="button" class="btn btn-sm btn-outline-primary assign-topic-user w-100 text-start">
+					<i class="fa fa-user-plus me-1"></i> ${escapeHtml(assignLabel)}
+				</button>
+			</div>
+		`;
+		sidebarRight.insertBefore(wrap, sidebarRight.firstChild);
+	}
+
 	// --- Page lifecycle ---
 
 	hooks.on('action:ajaxify.end', () => {
@@ -503,6 +546,8 @@
 		}
 		// Run for both single-topic page and topic list pages (category, recent, etc.)
 		renderBadges();
+		// Topic page: inject Internal Notes & Assign Topic into the far-right sidebar (component="sidebar/right")
+		renderSidebarRightButtons();
 	});
 
 	function getTopicDataForTid(tid) {
@@ -538,7 +583,7 @@
 
 	async function renderBadges() {
 		const headers = document.querySelectorAll('[component="topic/header"]');
-		const isTopicPage = ajaxify.data.tid && ajaxify.data.canViewInternalNotes;
+		const isTopicPage = ajaxify.data.tid && canViewInternalNotesOnPage();
 		// If no headers found but we're on the topic page, use a single "virtual" pass with #content .topic-title
 		const headerList = headers.length ? Array.from(headers) : (isTopicPage ? [document.body] : []);
 
