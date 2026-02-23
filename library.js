@@ -53,6 +53,13 @@ plugin.addRoutes = async ({ router, middleware, helpers }) => {
 		helpers.formatApiResponse(200, res, {});
 	});
 
+	// --- Assignable users (quick-select list; must be before /:tid routes) ---
+
+	routeHelpers.setupApiRoute(router, 'get', '/internalnotes/assignable-users', [middleware.ensureLoggedIn, ensurePrivileged], async (req, res) => {
+		const users = await getAssignableUsers();
+		helpers.formatApiResponse(200, res, { users });
+	});
+
 	// --- Group search route ---
 
 	routeHelpers.setupApiRoute(router, 'get', '/internalnotes/groups/search', [middleware.ensureLoggedIn, ensurePrivileged], async (req, res) => {
@@ -262,6 +269,61 @@ async function canViewNotes(uid) {
 		return isModOfAny;
 	}
 	return false;
+}
+
+/** Returns users who can be assigned (admins and, per settings, global mods and/or category mods). */
+async function getAssignableUsers() {
+	const settings = await meta.settings.get('internalnotes');
+	const uidSet = new Set();
+
+	// Administrators (always)
+	let adminUids = [];
+	try {
+		adminUids = await groups.getMembers('administrators', 0, -1);
+	} catch (e) {
+		// ignore
+	}
+	adminUids.forEach((uid) => uidSet.add(parseInt(uid, 10)));
+
+	// Global moderators (if enabled)
+	if (settings.allowGlobalMods === 'on') {
+		let globalModUids = [];
+		try {
+			globalModUids = await groups.getMembers('Global Moderators', 0, -1);
+		} catch (e) {
+			// ignore
+		}
+		globalModUids.forEach((uid) => uidSet.add(parseInt(uid, 10)));
+	}
+
+	// Category moderators (if enabled)
+	if (settings.allowCategoryMods === 'on') {
+		try {
+			const categories = require.main.require('./src/categories');
+			const cids = await categories.getAllCidsFromSet ? await categories.getAllCidsFromSet() : await db.getSortedSetRange('categories:cid', 0, -1);
+			const privilegesModule = require.main.require('./src/privileges');
+			const getModeratorUids = privilegesModule.categories && privilegesModule.categories.getModeratorUids;
+			if (getModeratorUids && Array.isArray(cids) && cids.length) {
+				for (const cid of cids) {
+					const uids = await getModeratorUids(cid);
+					if (Array.isArray(uids)) {
+						uids.forEach((uid) => uidSet.add(parseInt(uid, 10)));
+					}
+				}
+			}
+		} catch (e) {
+			// Fallback: no category mods in quick list
+		}
+	}
+
+	const uids = Array.from(uidSet).filter((uid) => uid > 0);
+	if (!uids.length) {
+		return [];
+	}
+	const userData = await user.getUsersFields(uids, ['uid', 'username', 'picture', 'userslug']);
+	return userData
+		.filter(Boolean)
+		.sort((a, b) => (a.username || '').localeCompare(b.username || ''));
 }
 
 // --- Notes CRUD ---
