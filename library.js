@@ -300,6 +300,32 @@ async function createNote(tid, uid, content) {
 		db.setObject(`internalnote:${noteId}`, note),
 		db.sortedSetAdd(`internalnotes:tid:${tid}`, timestamp, noteId),
 	]);
+
+	// Notify users who can view notes and are watching the topic (excluding the author)
+	const followers = await topics.getFollowers(tid);
+	const authorUid = parseInt(uid, 10);
+	const recipientUids = [];
+	for (const followerUid of followers) {
+		const parsed = parseInt(followerUid, 10);
+		if (parsed > 0 && parsed !== authorUid && await canViewNotes(parsed)) {
+			recipientUids.push(parsed);
+		}
+	}
+	if (recipientUids.length > 0) {
+		const topicData = await topics.getTopicFields(tid, ['title', 'slug']);
+		const notifObj = await notifications.create({
+			type: 'internalnotes-note',
+			bodyShort: `[[internalnotes:notif-internal-note, ${topicData.title}]]`,
+			nid: `internalnotes:note:${tid}:${noteId}`,
+			from: uid,
+			path: `/topic/${topicData.slug}`,
+			tid: tid,
+		});
+		if (notifObj) {
+			await notifications.push(notifObj, recipientUids);
+		}
+	}
+
 	const userData = await user.getUserFields(uid, ['uid', 'username', 'picture', 'userslug']);
 	return {
 		...note,
@@ -357,6 +383,13 @@ async function assignToUser(tid, assigneeUid, callerUid) {
 		db.sortedSetAdd(`uid:${parsedUid}:assignedTids`, ts, tid),
 	]);
 
+	// Set topic following status to watching for the assigned user
+	try {
+		await topics.follow(tid, parsedUid);
+	} catch (err) {
+		// Non-fatal: assignment already saved
+	}
+
 	if (parsedUid !== parseInt(callerUid, 10)) {
 		const topicData = await topics.getTopicFields(tid, ['title', 'slug']);
 		const notifObj = await notifications.create({
@@ -393,8 +426,11 @@ async function assignToGroup(tid, groupName, callerUid) {
 		db.sortedSetAdd(`group:${groupName}:assignedTids`, ts, tid),
 	]);
 
-	const topicData = await topics.getTopicFields(tid, ['title', 'slug']);
+	// Set topic following status to watching for all group members
 	const memberUids = await groups.getMembers(groupName, 0, -1);
+	await Promise.all(memberUids.map((memberUid) => topics.follow(tid, memberUid).catch(() => {})));
+
+	const topicData = await topics.getTopicFields(tid, ['title', 'slug']);
 	const recipientUids = memberUids.filter(uid => uid !== parseInt(callerUid, 10));
 	if (recipientUids.length) {
 		const notifObj = await notifications.create({
