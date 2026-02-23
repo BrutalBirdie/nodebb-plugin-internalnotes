@@ -1,3 +1,6 @@
+[![Lint and publish to npm](https://github.com/BrutalBirdie/nodebb-plugin-internalnotes/actions/workflows/publish-npm.yml/badge.svg)](https://github.com/BrutalBirdie/nodebb-plugin-internalnotes/actions/workflows/publish-npm.yml) [![Draft release on tag](https://github.com/BrutalBirdie/nodebb-plugin-internalnotes/actions/workflows/draft-release.yml/badge.svg)](https://github.com/BrutalBirdie/nodebb-plugin-internalnotes/actions/workflows/draft-release.yml)
+---
+
 # nodebb-plugin-internalnotes
 
 A NodeBB plugin that adds **internal staff notes** and **topic assignment** to forum topics. By default only administrators can see and manage notes and assignments; you can optionally allow global moderators and/or category moderators in the plugin settings. They are completely invisible to everyone else.
