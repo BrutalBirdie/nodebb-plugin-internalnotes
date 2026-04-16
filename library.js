@@ -145,17 +145,22 @@ plugin.addInternalNotesToTopics = async (data) => {
 	return data;
 };
 
-plugin.purgeTopicNotes = async ({ topic }) => {
-	if (!topic || !topic.tid) {
+plugin.purgeTopicNotes = async ({ topics }) => {
+	if (!Array.isArray(topics) || !topics.length) {
 		return;
 	}
-	const tid = topic.tid;
-	await removeTidFromAssigneeSet(tid);
-	const noteIds = await db.getSortedSetRange(`internalnotes:tid:${tid}`, 0, -1);
-	const keys = noteIds.map(id => `internalnote:${id}`);
-	await db.deleteAll(keys);
-	await db.delete(`internalnotes:tid:${tid}`);
-	await db.deleteObjectFields(`topic:${tid}`, ['assignee', 'assigneeType']);
+	await Promise.all(topics.map(async (topic) => {
+		if (!topic || !topic.tid) {
+			return;
+		}
+		const tid = topic.tid;
+		await removeTidFromAssigneeSet(tid);
+		const noteIds = await db.getSortedSetRange(`internalnotes:tid:${tid}`, 0, -1);
+		const keys = noteIds.map(id => `internalnote:${id}`);
+		await db.deleteAll(keys);
+		await db.delete(`internalnotes:tid:${tid}`);
+		await db.deleteObjectFields(`topic:${tid}`, ['assignee', 'assigneeType']);
+	}));
 };
 
 plugin.addNavigation = (menu) => {

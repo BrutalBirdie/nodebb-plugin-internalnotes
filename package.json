@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-internalnotes",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Add internal staff notes and assignees to topics in NodeBB. Notes are only visible to privileged users (moderators/admins).",
   "main": "library.js",
   "author": "BrutalBirdie",

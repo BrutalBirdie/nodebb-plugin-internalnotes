@@ -108,7 +108,7 @@ This document audits **nodebb-plugin-internalnotes** against [NodeBB upstream do
 | **filter:widget.render:internalnotes_sidebar** | Render widget HTML (topic page, privileged only) | ✅ |
 | **filter:topic.get** | Add notes/assignee to single topic | ✅ |
 | **filter:topics.get** | Add notes/assignee to topic lists | ✅ |
-| **action:topic.purge** | Clean up notes/assignee on topic purge | ✅ |
+| **action:topics.purge** | Clean up notes/assignee on topic purge | ✅ |
 
 **Verdict:** All hooks used correctly; filters return data in the expected shape.
 

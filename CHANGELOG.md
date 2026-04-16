@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] - 2026-04-16
+
+### Fixed
+
+- **NodeBB v4.9+ / v5.0 compatibility** — Migrated from the deprecated `action:topic.purge` hook to `action:topics.purge`. The purge handler now processes the topics batch emitted by NodeBB v4.9+, silencing the deprecation warning and preparing for the hook's removal in v5.0.
+
 ## [1.0.2] - 2025-02-23
 
 ### Added
