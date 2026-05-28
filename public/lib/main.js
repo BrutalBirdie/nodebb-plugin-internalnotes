@@ -368,7 +368,10 @@
 							quickSelectEl.style.display = 'flex';
 							const safeAttr = (str) => (str == null ? '' : String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'));
 							quickSelectEl.innerHTML = users.map((u) => {
-								const picture = (u.picture && u.picture.length) ? escapeHtml(u.picture) : '';
+								// NodeBB returns user.picture already HTML-escaped (since 4.12.0),
+							// so it is safe to interpolate into an attribute value as-is. Re-escaping
+							// would double-encode entities (e.g. `&#x2F;` → `&amp;#x2F;`) and break the URL.
+							const picture = (u.picture && u.picture.length) ? u.picture : '';
 								const name = u.username || '';
 								const uid = parseInt(u.uid, 10);
 								const titleAttr = safeAttr(name);
@@ -731,7 +734,7 @@
 				} else {
 					const u = a.user;
 					const avatarHtml = u.picture
-						? '<img class="assignee-badge-avatar" src="' + escapeHtml(u.picture) + '" alt="" onerror="this.style.display=\'none\';var n=this.nextElementSibling;if(n)n.style.display=\'inline\'">' +
+						? '<img class="assignee-badge-avatar" src="' + u.picture + '" alt="" onerror="this.style.display=\'none\';var n=this.nextElementSibling;if(n)n.style.display=\'inline\'">' +
 							'<i class="fa fa-user assignee-badge-fallback" style="display:none"></i> '
 						: '<i class="fa fa-user"></i> ';
 					badge.innerHTML = avatarHtml + escapeHtml(u.username);

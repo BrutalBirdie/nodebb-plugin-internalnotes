@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.1] - 2026-05-28
+
+### Fixed
+
+- **NodeBB v4.12.0 compatibility — broken avatar images in the Assign Topic modal and assignee badge.** NodeBB 4.12.0 now HTML-escapes `user.picture` server-side (turning `/` into `&#x2F;` etc.), and the plugin was escaping it a second time before injecting it into `<img src="...">`. The double-encoding broke the URL. The picture value is now used as-is when interpolated into attribute values.
+
 ## [1.1.0] - 2026-04-16
 
 ### Fixed
