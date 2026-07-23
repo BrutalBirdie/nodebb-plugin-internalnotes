@@ -32,6 +32,19 @@
 					</label>
 				</div>
 			</div>
+			<hr/>
+			<div class="mb-3">
+				<div class="form-check">
+					<input type="checkbox" class="form-check-input" id="staleReminderEnabled" name="staleReminderEnabled" />
+					<label class="form-check-label" for="staleReminderEnabled">
+						Send a daily reminder notification for open assigned topics with no recent activity
+					</label>
+				</div>
+			</div>
+			<div class="mb-3">
+				<label class="form-label" for="staleReminderDays">Days without activity before an assigned topic counts as stale</label>
+				<input type="number" class="form-control" id="staleReminderDays" name="staleReminderDays" min="1" placeholder="7" />
+			</div>
 		</div>
 	</div>
 	<hr/>
