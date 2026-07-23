@@ -573,4 +573,16 @@ async function getAssignedTids(uid) {
 	return tids;
 }
 
+/**
+ * Register the 'topic-assign' notification type with core so it shows up in
+ * Settings -> Notifications and can be delivered by email ('email' /
+ * 'notificationemail'). Unregistered types are always delivered in-app only.
+ */
+plugin.registerNotificationType = async (data) => {
+	if (!data.types.includes('notificationType_topic-assign')) {
+		data.types.push('notificationType_topic-assign');
+	}
+	return data;
+};
+
 module.exports = plugin;
