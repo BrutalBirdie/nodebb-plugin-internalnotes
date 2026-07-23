@@ -31,5 +31,16 @@
     "cancel": "Cancel",
     "notif-assigned-user": "You have been assigned to the topic: %1",
     "notif-assigned-group": "Your group %2 has been assigned to the topic: %1",
-    "notif-internal-note": "An internal note was added to a topic you're watching: %1"
+    "notif-internal-note": "An internal note was added to a topic you're watching: %1",
+    "notif-stale": "%1 of your assigned topics have had no activity for %2+ days",
+    "error-not-assigned": "This topic is not assigned.",
+    "status-open": "Open",
+    "status-resolved": "Resolved",
+    "mark-resolved": "Mark resolved",
+    "reopen": "Reopen",
+    "resolved-success": "Assignment marked as resolved.",
+    "reopened-success": "Assignment reopened.",
+    "tab-open": "Open",
+    "tab-resolved": "Resolved",
+    "tab-all": "All"
 }
