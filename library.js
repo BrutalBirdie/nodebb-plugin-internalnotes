@@ -737,7 +737,7 @@ async function sendStaleReminders() {
 		const notifObj = await notifications.create({
 			type: 'topic-assign-stale',
 			bodyShort: translator.compile('internalnotes:notif-stale', staleOpen.length, days),
-			bodyLong: staleOpen.map(t => `<p><a href="${relativePath}/topic/${t.slug}">${escapeHtmlText(t.title)}</a></p>`).join(''),
+			bodyLong: `<ul>${staleOpen.map(t => `<li><a href="${relativePath}/topic/${t.slug}">${escapeHtmlText(t.title)}</a></li>`).join('')}</ul>`,
 			nid: `internalnotes:stale:${uid}:${dateKey}`,
 			path: '/assigned',
 		});
