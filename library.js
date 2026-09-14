@@ -14,6 +14,7 @@ const topics = require.main.require('./src/topics');
 const privileges = require.main.require('./src/privileges');
 const pagination = require.main.require('./src/pagination');
 const helpers = require.main.require('./src/controllers/helpers');
+const translator = require.main.require('./src/translator');
 
 const controllers = require('./lib/controllers');
 
@@ -225,7 +226,6 @@ plugin.renderInternalNotesWidget = async (widget) => {
 		widget.html = '';
 		return widget;
 	}
-	const translator = require.main.require('./src/translator');
 	const [notesLabel, assignLabel] = await Promise.all([
 		new Promise((resolve) => translator.translate('[[internalnotes:thread-tool-notes]]', resolve)),
 		new Promise((resolve) => translator.translate('[[internalnotes:thread-tool-assign]]', resolve)),
@@ -420,7 +420,7 @@ async function createNote(tid, uid, content) {
 		const topicData = await topics.getTopicFields(tid, ['title', 'slug']);
 		const notifObj = await notifications.create({
 			type: 'internalnotes-note',
-			bodyShort: `[[internalnotes:notif-internal-note, ${topicData.title}]]`,
+			bodyShort: translator.compile('internalnotes:notif-internal-note', topicData.title),
 			nid: `internalnotes:note:${tid}:${noteId}`,
 			from: uid,
 			path: `/topic/${topicData.slug}`,
@@ -500,7 +500,7 @@ async function assignToUser(tid, assigneeUid, callerUid) {
 		const topicData = await topics.getTopicFields(tid, ['title', 'slug']);
 		const notifObj = await notifications.create({
 			type: 'topic-assign',
-			bodyShort: `[[internalnotes:notif-assigned-user, ${topicData.title}]]`,
+			bodyShort: translator.compile('internalnotes:notif-assigned-user', topicData.title),
 			nid: `internalnotes:assign:${tid}:uid:${parsedUid}`,
 			from: callerUid,
 			path: `/topic/${topicData.slug}`,
@@ -542,7 +542,7 @@ async function assignToGroup(tid, groupName, callerUid) {
 	if (recipientUids.length) {
 		const notifObj = await notifications.create({
 			type: 'topic-assign',
-			bodyShort: `[[internalnotes:notif-assigned-group, ${topicData.title}, ${groupName}]]`,
+			bodyShort: translator.compile('internalnotes:notif-assigned-group', topicData.title, groupName),
 			nid: `internalnotes:assign:${tid}:group:${groupName}`,
 			from: callerUid,
 			path: `/topic/${topicData.slug}`,
@@ -736,7 +736,7 @@ async function sendStaleReminders() {
 		}
 		const notifObj = await notifications.create({
 			type: 'topic-assign-stale',
-			bodyShort: `[[internalnotes:notif-stale, ${staleOpen.length}, ${days}]]`,
+			bodyShort: translator.compile('internalnotes:notif-stale', staleOpen.length, days),
 			bodyLong: staleOpen.map(t => `<p><a href="${relativePath}/topic/${t.slug}">${escapeHtmlText(t.title)}</a></p>`).join(''),
 			nid: `internalnotes:stale:${uid}:${dateKey}`,
 			path: '/assigned',

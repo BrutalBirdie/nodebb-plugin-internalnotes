@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Requires NodeBB 4.10.0 or newer** for the core cron module.
 
+### Fixed
+
+- **Notification text broke on some topic titles.** Titles or group names containing commas, `%` or `[[`/`]]` were interpolated raw into translation strings, which truncated or garbled the notification. Arguments are now escaped with `translator.compile`.
+
 ## [1.1.1] - 2026-05-28
 
 ### Fixed
