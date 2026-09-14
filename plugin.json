@@ -38,6 +38,10 @@
         {
             "hook": "action:topics.purge",
             "method": "purgeTopicNotes"
+        },
+        {
+            "hook": "filter:user.notificationTypes",
+            "method": "registerNotificationType"
         }
     ],
     "scss": [

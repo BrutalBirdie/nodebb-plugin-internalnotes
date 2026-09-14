@@ -165,12 +165,19 @@
 
 	async function renderAssignee(assignee, tid) {
 		const container = notesPanel.querySelector('.internal-notes-assignee');
-		const [notAssigned, assignChangeLabel, assignedTo, unassignTitle, unassigned] = await Promise.all([
+		const [notAssigned, assignChangeLabel, assignedTo, unassignTitle, unassigned,
+			statusOpen, statusResolved, markResolved, reopenLabel, resolvedSuccess, reopenedSuccess] = await Promise.all([
 			t('not-assigned'),
 			t('assign-change'),
 			t('assigned-to'),
 			t('unassign'),
 			t('unassigned'),
+			t('status-open'),
+			t('status-resolved'),
+			t('mark-resolved'),
+			t('reopen'),
+			t('resolved-success'),
+			t('reopened-success'),
 		]);
 		if (!assignee) {
 			container.innerHTML = `
@@ -196,18 +203,32 @@
 			label = `${pic}<strong>${escapeHtml(u.username)}</strong>`;
 		}
 
+		const resolved = assignee.status === 'resolved';
 		container.innerHTML = `
 			<div class="assignee-info">
 				<i class="fa ${assignee.type === 'group' ? 'fa-users' : 'fa-user'}"></i>
 				${escapeHtml(assignedTo)} ${label}
+				<span class="badge ${resolved ? 'bg-success' : 'bg-info'} internal-notes-status-badge">${escapeHtml(resolved ? statusResolved : statusOpen)}</span>
 				<button type="button" class="btn btn-xs btn-link assign-from-panel" title="${escapeHtml(assignChangeLabel)}">
 					<i class="fa fa-pencil"></i>
 				</button>
 				<button type="button" class="btn btn-xs btn-link text-danger unassign-topic" title="${escapeHtml(unassignTitle)}">
 					<i class="fa fa-times"></i>
 				</button>
+				<button type="button" class="btn btn-xs ${resolved ? 'btn-outline-secondary' : 'btn-outline-success'} toggle-assign-status ms-auto">
+					<i class="fa ${resolved ? 'fa-rotate-left' : 'fa-check'}"></i> ${escapeHtml(resolved ? reopenLabel : markResolved)}
+				</button>
 			</div>
 		`;
+		container.querySelector('.toggle-assign-status').addEventListener('click', async () => {
+			try {
+				await api.put(`/plugins/internalnotes/${tid}/status`, { status: resolved ? 'open' : 'resolved' });
+				await loadAssignee(tid);
+				alerts.success(resolved ? reopenedSuccess : resolvedSuccess);
+			} catch (err) {
+				alerts.error(err.message || (await t('error-loading')));
+			}
+		});
 		container.querySelector('.assign-from-panel').addEventListener('click', () => showAssignModal(tid));
 		container.querySelector('.unassign-topic').addEventListener('click', async () => {
 			try {
@@ -640,7 +661,46 @@
 		renderBadges();
 		// Topic page: inject Internal Notes & Assign Topic into the far-right sidebar (component="sidebar/right")
 		renderSidebarRightButtons();
+		// /assigned page: Open | Resolved | All status tabs
+		renderAssignedStatusTabs();
 	});
+
+	// --- /assigned page status tabs ---
+
+	async function renderAssignedStatusTabs() {
+		if (!ajaxify.data || !ajaxify.data.internalnotesAssignedPage) {
+			return;
+		}
+		const existing = document.querySelector('.internal-notes-status-tabs');
+		if (existing) {
+			existing.remove();
+		}
+		const [tabOpen, tabResolved, tabAll] = await Promise.all([
+			t('tab-open'), t('tab-resolved'), t('tab-all'),
+		]);
+		const current = ajaxify.data.internalnotesStatusFilter || 'open';
+		const counts = ajaxify.data.internalnotesStatusCounts || {};
+		const tabs = [
+			{ key: 'open', label: tabOpen },
+			{ key: 'resolved', label: tabResolved },
+			{ key: 'all', label: tabAll },
+		];
+		const nav = document.createElement('ul');
+		nav.className = 'nav nav-pills internal-notes-status-tabs mb-3 gap-1';
+		nav.innerHTML = tabs.map((tab) => {
+			const count = typeof counts[tab.key] === 'number' ? ` <span class="badge text-bg-light">${counts[tab.key]}</span>` : '';
+			return `
+			<li class="nav-item">
+				<a class="nav-link btn-sm ${tab.key === current ? 'active' : ''}" href="${config.relative_path}/assigned?status=${tab.key}">${escapeHtml(tab.label)}${count}</a>
+			</li>`;
+		}).join('');
+		const anchor = document.querySelector('#content [component="category"]') ||
+			document.querySelector('#content .category') ||
+			document.querySelector('#content');
+		if (anchor) {
+			anchor.parentElement.insertBefore(nav, anchor);
+		}
+	}
 
 	function getTopicDataForTid(tid) {
 		if (ajaxify.data.tid === tid) {
@@ -720,9 +780,11 @@
 
 			if (topic.assignee) {
 				const a = topic.assignee;
+				const resolved = a.status === 'resolved';
 				const badge = document.createElement('span');
 				badge.id = 'assignee-badge-' + tid;
-				badge.className = 'badge bg-info text-dark ms-2 assignee-badge';
+				badge.className = 'badge ' + (resolved ? 'bg-success text-white' : 'bg-info text-dark') + ' ms-2 assignee-badge';
+				badge.title = resolved ? 'Resolved' : 'Open';
 				badge.style.cursor = 'pointer';
 				if (a.type === 'group') {
 					const g = a.group;
