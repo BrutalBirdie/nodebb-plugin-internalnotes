@@ -1,4 +1,5 @@
 {
     "notificationType-topic-assign": "When a topic is assigned to you",
-    "notificationType-topic-assign-stale": "Reminder about your assigned topics with no recent activity"
+    "notificationType-topic-assign-stale": "Reminder about your assigned topics with no recent activity",
+    "notificationType-internalnotes-note": "When an internal note is added to a topic you are watching"
 }

@@ -5,7 +5,7 @@
 
 A NodeBB plugin that adds **internal staff notes** and **topic assignment** to forum topics. By default only administrators can see and manage notes and assignments; you can optionally allow global moderators and/or category moderators in the plugin settings. They are completely invisible to everyone else.
 
-**Version:** 1.1.1 · **NodeBB:** 4.x (tested on 4.12.0)
+**Version:** 1.1.1 · **NodeBB:** 4.10+ (tested on 4.12.0)
 
 ## Features
 
@@ -37,6 +37,9 @@ Navigate to **ACP > Plugins > Internal Notes & Assignments** to configure:
 
 - **Allow global moderators** — Enable to let global moderators view and manage internal notes and assignments (default: off; only admins have access).
 - **Allow category moderators** — Enable to let category moderators view and manage internal notes in their categories (default: off).
+- **Stale-assignment reminders** — Daily summary notification to each user about open topics assigned directly to them with no activity for N days (default: off, 7 days). Configure the hour of day and timezone (IANA name, e.g. `Europe/Berlin`; empty = server time). Group assignments are not included.
+
+Assignment, stale-reminder and internal-note notifications can be delivered by email: users choose this in **Settings > Notifications**, and admins can set the site default in **ACP > Settings > User**.
 
 ## Usage
 
@@ -49,6 +52,7 @@ Navigate to **ACP > Plugins > Internal Notes & Assignments** to configure:
 - Add new notes (supports Ctrl+Enter to submit)
 - Delete notes
 - See current assignee (user or group) and unassign
+- Mark an assignment as resolved or reopen it; resolved assignments stay resolved until reopened by staff
 
 ### Assignment modal
 
@@ -58,7 +62,7 @@ Navigate to **ACP > Plugins > Internal Notes & Assignments** to configure:
 
 ## Compatibility
 
-NodeBB v4.x. Tested on NodeBB 4.12.0.
+NodeBB v4.10.0 or newer (the reminders use the core cron module added in 4.10.0). Tested on NodeBB 4.12.0.
 
 The right-sidebar button placement (injection into `component="sidebar/right"`) is only tested with the default theme **nodebb-theme-harmony** [v2.1.36](https://github.com/NodeBB/nodebb-theme-harmony/tree/v2.1.36). Other themes may need the **Internal Notes & Assign Topic** widget in ACP > Appearance > Widgets.
 

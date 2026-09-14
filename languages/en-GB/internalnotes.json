@@ -40,6 +40,7 @@
     "reopen": "Reopen",
     "resolved-success": "Assignment marked as resolved.",
     "reopened-success": "Assignment reopened.",
+    "resolved-by": "Resolved by",
     "tab-open": "Open",
     "tab-resolved": "Resolved",
     "tab-all": "All"

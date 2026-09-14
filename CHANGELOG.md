@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Email delivery for plugin notifications** — The `topic-assign`, `topic-assign-stale` and `internalnotes-note` notification types are registered with core, so they appear in Settings > Notifications and can be delivered by email. ([#6](https://github.com/BrutalBirdie/nodebb-plugin-internalnotes/pull/6) by @modalai-tom)
+- **Open/resolved assignment status** — Mark assignments as resolved or reopen them from the notes panel (`PUT /api/v3/plugins/internalnotes/:tid/status`). The resolving user and time are stored. Assignee badges turn green when resolved and the `/assigned` page has Open, Resolved and All tabs. ([#6](https://github.com/BrutalBirdie/nodebb-plugin-internalnotes/pull/6) by @modalai-tom)
+- **Stale-assignment reminders** — Opt-in daily summary notification about open topics assigned directly to a user with no activity for N days, sent at a configurable hour and timezone. ([#6](https://github.com/BrutalBirdie/nodebb-plugin-internalnotes/pull/6) by @modalai-tom)
+
+### Changed
+
+- **Requires NodeBB 4.10.0 or newer** for the core cron module.
+
+### Fixed
+
+- **Notification text broke on some topic titles.** Titles or group names containing commas, `%` or `[[`/`]]` were interpolated raw into translation strings, which truncated or garbled the notification. Arguments are now escaped with `translator.compile`.
+
 ## [1.1.1] - 2026-05-28
 
 ### Fixed
