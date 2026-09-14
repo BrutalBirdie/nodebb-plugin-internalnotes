@@ -45,6 +45,17 @@
 				<label class="form-label" for="staleReminderDays">Days without activity before an assigned topic counts as stale</label>
 				<input type="number" class="form-control" id="staleReminderDays" name="staleReminderDays" min="1" placeholder="7" />
 			</div>
+			<div class="row">
+				<div class="col-sm-4 mb-3">
+					<label class="form-label" for="staleReminderHour">Hour of day to send reminders (0&ndash;23)</label>
+					<input type="number" class="form-control" id="staleReminderHour" name="staleReminderHour" min="0" max="23" placeholder="15" />
+				</div>
+				<div class="col-sm-8 mb-3">
+					<label class="form-label" for="staleReminderTimezone">Timezone</label>
+					<input type="text" class="form-control" id="staleReminderTimezone" name="staleReminderTimezone" placeholder="Europe/Berlin" />
+					<div class="form-text">IANA timezone name. Leave empty to use the server's timezone.</div>
+				</div>
+			</div>
 		</div>
 	</div>
 	<hr/>

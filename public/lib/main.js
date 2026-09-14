@@ -166,7 +166,7 @@
 	async function renderAssignee(assignee, tid) {
 		const container = notesPanel.querySelector('.internal-notes-assignee');
 		const [notAssigned, assignChangeLabel, assignedTo, unassignTitle, unassigned,
-			statusOpen, statusResolved, markResolved, reopenLabel, resolvedSuccess, reopenedSuccess] = await Promise.all([
+			statusOpen, statusResolved, markResolved, reopenLabel, resolvedSuccess, reopenedSuccess, resolvedByLabel] = await Promise.all([
 			t('not-assigned'),
 			t('assign-change'),
 			t('assigned-to'),
@@ -178,6 +178,7 @@
 			t('reopen'),
 			t('resolved-success'),
 			t('reopened-success'),
+			t('resolved-by'),
 		]);
 		if (!assignee) {
 			container.innerHTML = `
@@ -204,11 +205,12 @@
 		}
 
 		const resolved = assignee.status === 'resolved';
+		const statusTitle = resolved && assignee.resolvedBy ? `${resolvedByLabel} ${assignee.resolvedBy.username}` : '';
 		container.innerHTML = `
 			<div class="assignee-info">
 				<i class="fa ${assignee.type === 'group' ? 'fa-users' : 'fa-user'}"></i>
 				${escapeHtml(assignedTo)} ${label}
-				<span class="badge ${resolved ? 'bg-success' : 'bg-info'} internal-notes-status-badge">${escapeHtml(resolved ? statusResolved : statusOpen)}</span>
+				<span class="badge ${resolved ? 'bg-success' : 'bg-info'} internal-notes-status-badge" title="${escapeHtml(statusTitle)}">${escapeHtml(resolved ? statusResolved : statusOpen)}</span>
 				<button type="button" class="btn btn-xs btn-link assign-from-panel" title="${escapeHtml(assignChangeLabel)}">
 					<i class="fa fa-pencil"></i>
 				</button>
@@ -738,6 +740,7 @@
 		const isTopicPage = ajaxify.data.tid && canViewInternalNotesOnPage();
 		// If no headers found but we're on the topic page, use a single "virtual" pass with #content .topic-title
 		const headerList = headers.length ? Array.from(headers) : (isTopicPage ? [document.body] : []);
+		const [statusOpen, statusResolved] = await Promise.all([t('status-open'), t('status-resolved')]);
 
 		headerList.forEach((headerEl) => {
 			const row = headerEl.closest && headerEl.closest('[data-tid]');
@@ -784,7 +787,7 @@
 				const badge = document.createElement('span');
 				badge.id = 'assignee-badge-' + tid;
 				badge.className = 'badge ' + (resolved ? 'bg-success text-white' : 'bg-info text-dark') + ' ms-2 assignee-badge';
-				badge.title = resolved ? 'Resolved' : 'Open';
+				badge.title = resolved ? statusResolved : statusOpen;
 				badge.style.cursor = 'pointer';
 				if (a.type === 'group') {
 					const g = a.group;

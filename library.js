@@ -1,5 +1,8 @@
 'use strict';
 
+const nconf = require.main.require('nconf');
+const winston = require.main.require('winston');
+
 const db = require.main.require('./src/database');
 const user = require.main.require('./src/user');
 const groups = require.main.require('./src/groups');
@@ -16,24 +19,21 @@ const controllers = require('./lib/controllers');
 
 const plugin = {};
 
+const assigneeFields = ['assignee', 'assigneeType', 'assigneeStatus', 'assigneeResolvedBy', 'assigneeResolvedAt'];
+
 plugin.init = async (params) => {
 	const { router } = params;
 	const middleware = require.main.require('./src/middleware');
 	routeHelpers.setupAdminPageRoute(router, '/admin/plugins/internalnotes', controllers.renderAdminPage);
 	routeHelpers.setupPageRoute(router, '/assigned', [middleware.ensureLoggedIn], plugin.renderAssignedPage);
 
-	// Daily reminder about assigned topics that have gone quiet (opt-in via ACP)
-	try {
-		const cron = require.main.require('./src/cron');
-		await cron.addJob({
-			name: 'internalnotes:stale-reminders',
-			cronTime: '0 15 * * *',
-			onTick: sendStaleReminders,
-		});
-	} catch (err) {
-		const winston = require.main.require('winston');
-		winston.warn(`[internalnotes] could not register stale-reminder cron job: ${err.message}`);
-	}
+	// Runs hourly so the ACP hour/timezone settings apply without re-registering the job
+	const cron = require.main.require('./src/cron');
+	await cron.addJob({
+		name: 'internalnotes:stale-reminders',
+		cronTime: '0 * * * *',
+		onTick: sendStaleReminders,
+	});
 };
 
 plugin.addRoutes = async ({ router, middleware, helpers }) => {
@@ -69,13 +69,8 @@ plugin.addRoutes = async ({ router, middleware, helpers }) => {
 	// --- Assignment status (open/resolved) ---
 
 	routeHelpers.setupApiRoute(router, 'put', '/internalnotes/:tid/status', [middleware.ensureLoggedIn, ensurePrivileged], async (req, res) => {
-		const { status } = req.body;
-		try {
-			const saved = await setAssignmentStatus(req.params.tid, status);
-			helpers.formatApiResponse(200, res, { status: saved });
-		} catch (err) {
-			helpers.formatApiResponse(400, res, err);
-		}
+		const assignee = await setAssignmentStatus(req.params.tid, req.body.status, req.uid);
+		helpers.formatApiResponse(200, res, { assignee });
 	});
 
 	// --- Assignable users (quick-select list; must be before /:tid routes) ---
@@ -184,7 +179,7 @@ plugin.purgeTopicNotes = async ({ topics }) => {
 		const keys = noteIds.map(id => `internalnote:${id}`);
 		await db.deleteAll(keys);
 		await db.delete(`internalnotes:tid:${tid}`);
-		await db.deleteObjectFields(`topic:${tid}`, ['assignee', 'assigneeType', 'assigneeStatus']);
+		await db.deleteObjectFields(`topic:${tid}`, assigneeFields);
 	}));
 };
 
@@ -488,6 +483,7 @@ async function assignToUser(tid, assigneeUid, callerUid) {
 
 	await removeTidFromAssigneeSet(tid);
 	const ts = Date.now();
+	await db.deleteObjectFields(`topic:${tid}`, ['assigneeResolvedBy', 'assigneeResolvedAt']);
 	await Promise.all([
 		db.setObject(`topic:${tid}`, { assignee: parsedUid, assigneeType: 'user', assigneeStatus: 'open' }),
 		db.sortedSetAdd(`uid:${parsedUid}:assignedTids`, ts, tid),
@@ -516,7 +512,7 @@ async function assignToUser(tid, assigneeUid, callerUid) {
 	}
 
 	const userData = await user.getUserFields(parsedUid, ['uid', 'username', 'picture', 'userslug']);
-	return { type: 'user', user: userData };
+	return { type: 'user', user: userData, status: 'open' };
 }
 
 async function assignToGroup(tid, groupName, callerUid) {
@@ -531,6 +527,7 @@ async function assignToGroup(tid, groupName, callerUid) {
 
 	await removeTidFromAssigneeSet(tid);
 	const ts = Date.now();
+	await db.deleteObjectFields(`topic:${tid}`, ['assigneeResolvedBy', 'assigneeResolvedAt']);
 	await Promise.all([
 		db.setObject(`topic:${tid}`, { assignee: groupName, assigneeType: 'group', assigneeStatus: 'open' }),
 		db.sortedSetAdd(`group:${groupName}:assignedTids`, ts, tid),
@@ -557,15 +554,15 @@ async function assignToGroup(tid, groupName, callerUid) {
 	}
 
 	const groupData = await groups.getGroupFields(groupName, ['name', 'slug', 'memberCount', 'icon', 'labelColor']);
-	return { type: 'group', group: groupData };
+	return { type: 'group', group: groupData, status: 'open' };
 }
 
 async function unassignTopic(tid) {
 	await removeTidFromAssigneeSet(tid);
-	await db.deleteObjectFields(`topic:${tid}`, ['assignee', 'assigneeType', 'assigneeStatus']);
+	await db.deleteObjectFields(`topic:${tid}`, assigneeFields);
 }
 
-async function setAssignmentStatus(tid, status) {
+async function setAssignmentStatus(tid, status, callerUid) {
 	if (!['open', 'resolved'].includes(status)) {
 		throw new Error('[[error:invalid-data]]');
 	}
@@ -573,16 +570,25 @@ async function setAssignmentStatus(tid, status) {
 	if (!topicData || !topicData.assignee) {
 		throw new Error('[[internalnotes:error-not-assigned]]');
 	}
-	await db.setObjectField(`topic:${tid}`, 'assigneeStatus', status);
-	return status;
+	if (status === 'resolved') {
+		await db.setObject(`topic:${tid}`, {
+			assigneeStatus: status,
+			assigneeResolvedBy: parseInt(callerUid, 10),
+			assigneeResolvedAt: Date.now(),
+		});
+	} else {
+		await db.setObjectField(`topic:${tid}`, 'assigneeStatus', status);
+		await db.deleteObjectFields(`topic:${tid}`, ['assigneeResolvedBy', 'assigneeResolvedAt']);
+	}
+	return getAssignee(tid);
 }
 
 async function getAssignee(tid) {
-	const topicData = await db.getObjectFields(`topic:${tid}`, ['assignee', 'assigneeType', 'assigneeStatus']);
+	const topicData = await db.getObjectFields(`topic:${tid}`, assigneeFields);
 	if (!topicData || !topicData.assignee) {
 		return null;
 	}
-	const status = topicData.assigneeStatus === 'resolved' ? 'resolved' : 'open';
+	const status = await getStatusData(topicData);
 
 	if (topicData.assigneeType === 'group') {
 		const exists = await groups.exists(topicData.assignee);
@@ -590,7 +596,7 @@ async function getAssignee(tid) {
 			return null;
 		}
 		const groupData = await groups.getGroupFields(topicData.assignee, ['name', 'slug', 'memberCount', 'icon', 'labelColor']);
-		return { type: 'group', group: groupData, status };
+		return { type: 'group', group: groupData, ...status };
 	}
 
 	const uid = parseInt(topicData.assignee, 10);
@@ -602,7 +608,23 @@ async function getAssignee(tid) {
 		return null;
 	}
 	const userData = await user.getUserFields(uid, ['uid', 'username', 'picture', 'userslug']);
-	return { type: 'user', user: userData, status };
+	return { type: 'user', user: userData, ...status };
+}
+
+async function getStatusData(topicData) {
+	if (topicData.assigneeStatus !== 'resolved') {
+		return { status: 'open' };
+	}
+	const data = { status: 'resolved' };
+	const resolvedAt = parseInt(topicData.assigneeResolvedAt, 10);
+	if (resolvedAt) {
+		data.resolvedAtISO = new Date(resolvedAt).toISOString();
+	}
+	const resolvedBy = parseInt(topicData.assigneeResolvedBy, 10);
+	if (resolvedBy > 0) {
+		data.resolvedBy = await user.getUserFields(resolvedBy, ['uid', 'username', 'userslug']);
+	}
+	return data;
 }
 
 async function getAssignedTids(uid) {
@@ -635,7 +657,7 @@ async function getAssignedTids(uid) {
  * 'notificationemail'). Unregistered types are always delivered in-app only.
  */
 plugin.registerNotificationType = async (data) => {
-	['notificationType_topic-assign', 'notificationType_topic-assign-stale'].forEach((type) => {
+	['notificationType_topic-assign', 'notificationType_topic-assign-stale', 'notificationType_internalnotes-note'].forEach((type) => {
 		if (!data.types.includes(type)) {
 			data.types.push(type);
 		}
@@ -650,44 +672,72 @@ function escapeHtmlText(str) {
 		.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function getLocalDateParts(timeZone) {
+	const opts = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' };
+	let formatter;
+	try {
+		formatter = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: timeZone || undefined });
+	} catch (_err) {
+		winston.warn(`[internalnotes] invalid staleReminderTimezone "${timeZone}", using server time`);
+		formatter = new Intl.DateTimeFormat('en-US', opts);
+	}
+	const parts = Object.fromEntries(formatter.formatToParts(new Date()).map(p => [p.type, p.value]));
+	return {
+		hour: parseInt(parts.hour, 10),
+		dateKey: `${parts.year}-${parts.month}-${parts.day}`,
+	};
+}
+
 /**
- * Daily job: for every assignable user, find topics assigned directly to them
- * that are still open and have had no posts for `staleReminderDays` days, and
- * send one summary notification (type 'topic-assign-stale', so users can opt
- * into email delivery). Group assignments are skipped to avoid nagging every
- * member of a group. Disabled unless enabled in the plugin's ACP settings.
+ * Hourly job that only acts at the configured hour: for every assignable user, find
+ * topics assigned directly to them that are still open and have had no posts (nor
+ * been assigned) for `staleReminderDays` days, and send one summary notification.
+ * Group assignments are skipped to avoid nagging every member of a group.
  */
 async function sendStaleReminders() {
 	const settings = await meta.settings.get('internalnotes');
 	if (settings.staleReminderEnabled !== 'on') {
 		return;
 	}
+	const hourSetting = parseInt(settings.staleReminderHour, 10);
+	const targetHour = hourSetting >= 0 && hourSetting <= 23 ? hourSetting : 15;
+	const { hour, dateKey } = getLocalDateParts((settings.staleReminderTimezone || '').trim());
+	if (hour !== targetHour) {
+		return;
+	}
+	// DST fall-back repeats an hour; only send once per local day
+	const lastRun = await db.getObjectField('internalnotes:staleReminders', 'lastRun');
+	if (lastRun === dateKey) {
+		return;
+	}
+	await db.setObjectField('internalnotes:staleReminders', 'lastRun', dateKey);
+
 	const days = Math.max(1, parseInt(settings.staleReminderDays, 10) || 7);
 	const cutoff = Date.now() - (days * 86400000);
-	const dateKey = new Date().toISOString().slice(0, 10);
+	const relativePath = nconf.get('relative_path');
 	const assignableUsers = await getAssignableUsers();
 
 	for (const assignee of assignableUsers) {
 		const uid = parseInt(assignee.uid, 10);
-		const tids = await db.getSortedSetRange(`uid:${uid}:assignedTids`, 0, -1);
-		if (!tids.length) {
+		const assigned = await db.getSortedSetRangeWithScores(`uid:${uid}:assignedTids`, 0, -1);
+		if (!assigned.length) {
 			continue;
 		}
-		const topicData = await topics.getTopicsFields(tids, ['tid', 'title', 'slug', 'lastposttime', 'deleted']);
-		const stale = topicData.filter(t => t && t.tid && !parseInt(t.deleted, 10) &&
-			parseInt(t.lastposttime, 10) < cutoff);
+		const topicData = await topics.getTopicsFields(assigned.map(a => a.value), ['tid', 'title', 'slug', 'lastposttime', 'deleted']);
+		const stale = topicData.filter((t, i) => t && t.tid && !t.deleted &&
+			Math.max(t.lastposttime || 0, assigned[i].score) < cutoff);
 		if (!stale.length) {
 			continue;
 		}
-		const openStatuses = await db.getObjectsFields(stale.map(t => `topic:${t.tid}`), ['assigneeStatus']);
-		const staleOpen = stale.filter((t, i) => !(openStatuses[i] && openStatuses[i].assigneeStatus === 'resolved'));
+		const statuses = await db.getObjectsFields(stale.map(t => `topic:${t.tid}`), ['assigneeStatus']);
+		const staleOpen = stale.filter((t, i) => !(statuses[i] && statuses[i].assigneeStatus === 'resolved'));
 		if (!staleOpen.length) {
 			continue;
 		}
 		const notifObj = await notifications.create({
 			type: 'topic-assign-stale',
 			bodyShort: `[[internalnotes:notif-stale, ${staleOpen.length}, ${days}]]`,
-			bodyLong: `<ul>${staleOpen.map(t => `<li><a href="/topic/${t.slug}">${escapeHtmlText(t.title)}</a></li>`).join('')}</ul>`,
+			bodyLong: staleOpen.map(t => `<p><a href="${relativePath}/topic/${t.slug}">${escapeHtmlText(t.title)}</a></p>`).join(''),
 			nid: `internalnotes:stale:${uid}:${dateKey}`,
 			path: '/assigned',
 		});
